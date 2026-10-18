@@ -20,15 +20,58 @@ ma_nguon/
 
 ## Cách 1 – Docker (Windows, macOS, Linux)
 
-Cần [Git](https://git-scm.com/) và [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Linux: Docker Engine + Compose).
+### Bước 1 – Cài Git và Docker (làm một lần)
+
+**Git:** tải ở https://git-scm.com/downloads (Windows: cài Git for Windows, giữ các lựa chọn mặc định). Ubuntu: `sudo apt-get install -y git`.
+
+**Windows 10/11 – Docker Desktop**
+
+1. Bật WSL 2: mở PowerShell bằng **Run as administrator**, chạy `wsl --install`, rồi khởi động lại máy. Máy đã có WSL thì chạy `wsl --update`.
+2. Tải Docker Desktop ở https://www.docker.com/products/docker-desktop/ → *Download for Windows – AMD64* (máy chip ARM chọn ARM64). Chạy file cài, giữ lựa chọn **Use WSL 2 instead of Hyper-V**, khởi động lại nếu được hỏi.
+3. Mở Docker Desktop, chấp nhận điều khoản; có thể bỏ qua bước đăng nhập. Đợi góc dưới bên trái báo **Engine running**.
+4. Yêu cầu máy: bật ảo hóa (Intel VT-x / AMD-V) trong BIOS, RAM từ 8 GB (tối thiểu 4 GB). Docker Desktop miễn phí cho cá nhân và học tập.
+
+**macOS – Docker Desktop**
+
+Tải ở https://www.docker.com/products/docker-desktop/, chọn **Apple Silicon** (chip M1–M4) hoặc **Intel**, kéo Docker vào Applications rồi mở; hoặc `brew install --cask docker`. Đợi biểu tượng cá voi trên thanh menu báo đang chạy.
+
+**Ubuntu 22.04/24.04 – Docker Engine** (đã kiểm thử trên 22.04)
 
 ```bash
-git clone <link repo>
-cd <tên repo>/ma_nguon
+sudo apt-get update
+sudo apt-get install -y docker.io docker-compose-v2
+sudo usermod -aG docker $USER      # đăng xuất rồi đăng nhập lại để dùng docker không cần sudo
+```
+
+**Kiểm tra** (mọi hệ điều hành):
+
+```bash
+docker --version
+docker compose version
+docker run --rm hello-world
+```
+
+Lỗi hay gặp:
+
+| Lỗi | Cách xử lý |
+| --- | --- |
+| `Cannot connect to the Docker daemon`, `error during connect … dockerDesktopLinuxEngine` | Docker Desktop chưa chạy: mở và đợi **Engine running** |
+| `WSL 2 installation is incomplete` / cần cập nhật kernel | PowerShell (admin): `wsl --update`, rồi mở lại Docker Desktop |
+| `Virtualization support not detected` | Bật VT-x / AMD-V (SVM) trong BIOS |
+| `permission denied … docker.sock` (Linux) | Chưa đăng xuất/đăng nhập lại sau lệnh `usermod`, hoặc tạm thêm `sudo` trước `docker` |
+| `port is already allocated` | Đổi cổng (xem cuối mục này) |
+
+### Bước 2 – Tải code và chạy
+
+```bash
+git clone https://github.com/minhonline2k2/sql_manage_library.git
+cd sql_manage_library/ma_nguon
 docker compose up -d --build
 ```
 
-Mở **http://localhost:8501**. Lần đầu mất vài phút để tải image; container `db` tự dựng CSDL `QLTV` (khoảng 20 giây).
+Mở **http://localhost:8501**. Lần đầu mất vài phút để tải image; container `db` tự dựng CSDL `QLTV` (khoảng 20 giây). Lấy bản mới nhất về sau này: `git pull` rồi `docker compose up -d --build`.
+
+### Bước 3 – Kiểm thử và thao tác thường dùng
 
 Các lệnh dưới đây chạy được cả trong PowerShell, cmd và bash (đứng ở thư mục `ma_nguon`):
 
@@ -40,14 +83,17 @@ Các lệnh dưới đây chạy được cả trong PowerShell, cmd và bash (�
 | Mở MariaDB dòng lệnh | `docker compose exec db mariadb -uroot -proot QLTV` |
 | Xem log / tắt / xóa sạch | `docker compose logs -f` · `docker compose down` · `docker compose down -v` |
 
-Kết nối bằng HeidiSQL/DBeaver: `127.0.0.1`, cổng `3307`, user `root` / `root` (hoặc `ql_thuvien` / `QuanLy@2026`). Trùng cổng thì đổi: `APP_PORT=8502 DB_PORT=3308 docker compose up -d`.
+Kết nối bằng HeidiSQL/DBeaver: `127.0.0.1`, cổng `3307`, user `root` / `root` (hoặc `ql_thuvien` / `QuanLy@2026`). Trùng cổng thì đổi:
+
+- bash (Linux, macOS, Git Bash): `APP_PORT=8502 DB_PORT=3308 docker compose up -d`
+- PowerShell: `$env:APP_PORT=8502; $env:DB_PORT=3308; docker compose up -d`
 
 Sửa code trong `ma_nguon/app/` là giao diện cập nhật ngay (thư mục được mount vào container). Sửa file SQL thì chạy lệnh "Dựng lại CSDL sạch".
 
 ## Cách 2 – Máy ảo Ubuntu 22.04/24.04 (đủ cả quy trình dựng báo cáo)
 
 ```bash
-git clone <link repo> ~/qltv && cd ~/qltv
+git clone https://github.com/minhonline2k2/sql_manage_library.git ~/qltv && cd ~/qltv
 sudo bash ma_nguon/cai_dat_ubuntu.sh        # MariaDB 10.11, Graphviz, Node 20, Python venv ~/qltv-venv, supervisor
 cd ma_nguon/sql && sudo sh build_all.sh      # dựng CSDL
 ```
