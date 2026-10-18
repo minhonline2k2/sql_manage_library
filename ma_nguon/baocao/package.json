@@ -1,0 +1,8 @@
+{
+  "name": "qltv-baocao",
+  "private": true,
+  "description": "Chuyển BaoCao.md sang Word: node build_docx.js BaoCao.md ../../tai_lieu/BaoCao_BTL_QLTV.docx",
+  "dependencies": {
+    "docx": "9.12.0"
+  }
+}

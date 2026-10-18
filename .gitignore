@@ -1,0 +1,15 @@
+# Môi trường cục bộ: dựng lại bằng requirements.txt, package-lock.json hoặc Docker
+.venv/
+venv/
+qltv-venv/
+node_modules/
+__pycache__/
+*.pyc
+
+# File nén
+*.zip
+
+# File tạm của Office và hệ điều hành
+~$*
+.DS_Store
+Thumbs.db

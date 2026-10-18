@@ -1,0 +1,140 @@
+[
+ [
+  "Lập phiếu mượn",
+  "success",
+  "success",
+  "Đã lập phiếu mượn số: 832"
+ ],
+ [
+  "Lập phiếu mượn",
+  "error",
+  "error",
+  "E101: Mỗi lần mượn tối đa 10 cuốn sách"
+ ],
+ [
+  "Lập phiếu trả",
+  "success",
+  "success",
+  "Đã trả: phiếu 1569, tiền phạt 3170000 đ"
+ ],
+ [
+  "Thanh toán toàn bộ phạt",
+  "success",
+  "success",
+  "Đã thu: 3,170,000 đ"
+ ],
+ [
+  "Thêm phòng",
+  "success",
+  "success",
+  "Đã thêm phòng CN01-N6"
+ ],
+ [
+  "Sửa tên / sức chứa",
+  "success",
+  "success",
+  "Đã sửa phòng CN01-N6"
+ ],
+ [
+  "Xóa phòng",
+  "success",
+  "success",
+  "Đã xóa phòng CN01-N6"
+ ],
+ [
+  "Đăng ký",
+  "success",
+  "success",
+  "Đã đăng ký: mã DG0201, thẻ THE0201"
+ ],
+ [
+  "Lưu sửa",
+  "success",
+  "success",
+  "Thành công"
+ ],
+ [
+  "Gia hạn thẻ 1 năm",
+  "success",
+  "success",
+  "Thành công"
+ ],
+ [
+  "Xóa độc giả",
+  "success",
+  "success",
+  "Thành công"
+ ],
+ [
+  "Xóa độc giả",
+  "error",
+  "error",
+  "E404: Độc giả còn giữ sách, không xóa được"
+ ],
+ [
+  "Thêm phòng kho",
+  "success",
+  "success",
+  "Đã thêm CN01-K3"
+ ],
+ [
+  "Thêm giá",
+  "success",
+  "success",
+  "Đã thêm giá CN01-K1-TR9"
+ ],
+ [
+  "Sửa sức chứa",
+  "success",
+  "success",
+  "Đã sửa giá CN01-K1-TR9"
+ ],
+ [
+  "Xóa giá",
+  "success",
+  "success",
+  "Đã xóa giá CN01-K1-TR9"
+ ],
+ [
+  "Xóa phòng kho",
+  "success",
+  "success",
+  "Đã xóa CN01-K3"
+ ],
+ [
+  "Xóa cuốn sách",
+  "success",
+  "success",
+  "Đã xóa GT0026-001"
+ ],
+ [
+  "Xóa cuốn sách",
+  "error",
+  "error",
+  "E303: Cuốn sách đã có lịch sử mượn, hãy dùng thanh lý thay vì xóa"
+ ],
+ [
+  "Thêm thủ thư",
+  "success",
+  "success",
+  "Đã thêm thủ thư mã: TT016"
+ ],
+ [
+  "Lưu sửa thủ thư",
+  "success",
+  "success",
+  "Đã sửa TT016"
+ ],
+ [
+  "Xóa thủ thư",
+  "success",
+  "success",
+  "Đã xóa TT016"
+ ],
+ [
+  "Xóa thủ thư",
+  "error",
+  "error",
+  "E403: Thủ thư đang là trưởng chi nhánh, đổi trưởng trước khi xóa"
+ ]
+]

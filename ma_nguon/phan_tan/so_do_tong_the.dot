@@ -1,0 +1,35 @@
+digraph PT {
+  graph [rankdir=TB, fontname="Arial", fontsize=12, nodesep=0.4, ranksep=0.5, compound=true];
+  node  [fontname="Arial", fontsize=10, shape=box, style="rounded,filled", fillcolor="#F2F2F2"];
+  edge  [fontname="Arial", fontsize=9];
+
+  subgraph cluster_global { label="Mức toàn cục (trong suốt phân mảnh)"; style="rounded,dashed"; color="#1F4E78";
+    GS [label="Lược đồ toàn cục\n23 quan hệ QLTV", fillcolor="#DDEBF7"];
+    FS [label="Lược đồ phân mảnh\nngang nguyên thủy · dẫn xuất · dọc · lai", fillcolor="#DDEBF7"];
+    AS [label="Lược đồ cấp phát\nRij → site j · nhân bản danh mục", fillcolor="#DDEBF7"];
+    GS -> FS -> AS;
+  }
+  APP [label="Ứng dụng thủ thư / quản lý\n(procedure, view pt_*)", shape=component, fillcolor="#FFF2CC"];
+  APP -> GS;
+
+  subgraph cluster_s1 { label="Site S1 – CN01 Cầu Giấy (trụ sở)"; style=rounded; color="#548235";
+    M1 [label="Lược đồ ánh xạ cục bộ"]; D1 [label="MariaDB QLTV_CN01", shape=cylinder, fillcolor="#E2EFDA"];
+    F1 [label="DOC_GIA_1,2 · NGUOI_DG_A1/B1\nPHIEU_MUON_1 · CT_MUON_1 · PHIEU_TRA_1 · PHIEU_PHAT_1\nPHONG_KHO_1 · GIA_SACH_1 · CUON_SACH_1\nTHU_THU_1 · PHONG_DOC_1 · THUE_1\nSACH_THANH_LY · CT_MUON_LUU_TRU", shape=note, fillcolor="white"];
+    M1 -> D1 -> F1 [arrowhead=none];
+  }
+  subgraph cluster_s2 { label="Site S2 – CN02 Hà Đông"; style=rounded; color="#548235";
+    M2 [label="Lược đồ ánh xạ cục bộ"]; D2 [label="MariaDB QLTV_CN02", shape=cylinder, fillcolor="#E2EFDA"];
+    F2 [label="DOC_GIA_3,4 · NGUOI_DG_A2/B2\nPHIEU_MUON_2 · CT_MUON_2 · PHIEU_TRA_2 · PHIEU_PHAT_2\nPHONG_KHO_2 · GIA_SACH_2 · CUON_SACH_2\nTHU_THU_2 · PHONG_DOC_2 · THUE_2", shape=note, fillcolor="white"];
+    M2 -> D2 -> F2 [arrowhead=none];
+  }
+  subgraph cluster_s3 { label="Site S3 – CN03 Hoàn Kiếm"; style=rounded; color="#548235";
+    M3 [label="Lược đồ ánh xạ cục bộ"]; D3 [label="MariaDB QLTV_CN03", shape=cylinder, fillcolor="#E2EFDA"];
+    F3 [label="DOC_GIA_5,6 · NGUOI_DG_A3/B3\nPHIEU_MUON_3 · CT_MUON_3 · PHIEU_TRA_3 · PHIEU_PHAT_3\nPHONG_KHO_3 · GIA_SACH_3 · CUON_SACH_3\nTHU_THU_3 · PHONG_DOC_3 · THUE_3", shape=note, fillcolor="white"];
+    M3 -> D3 -> F3 [arrowhead=none];
+  }
+  AS -> M1; AS -> M2; AS -> M3;
+  REP [label="Bản sao toàn phần tại cả 3 site:\nCHI_NHANH · THE_LOAI · BANG_PHI_PHAT · LOAI_PHONG\nDAU_SACH · TAC_GIA · DAU_SACH_TAC_GIA", shape=note, fillcolor="#FCE4D6"];
+  WAN [label="Mạng WAN", shape=ellipse, fillcolor="#FFFFFF"];
+  F1 -> WAN [dir=both, style=dashed]; F2 -> WAN [dir=both, style=dashed]; F3 -> WAN [dir=both, style=dashed];
+  WAN -> REP [style=dotted, arrowhead=none, label=" đồng bộ bản sao"];
+}

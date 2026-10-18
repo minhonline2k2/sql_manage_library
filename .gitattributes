@@ -1,0 +1,6 @@
+# Giữ xuống dòng LF cho mọi file văn bản (script .sh/.sql chạy trong Linux/Docker sẽ lỗi nếu là CRLF)
+* text=auto eol=lf
+*.docx binary
+*.xlsx binary
+*.png binary
+*.zip binary
