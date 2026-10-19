@@ -59,6 +59,13 @@ BEGIN
   RETURN v_CoBan + v_MoiNgay * v_Tre;
 END //
 
+-- Thuộc tính dẫn xuất TongTien của lượt thuê phòng = số giờ × giá/giờ của loại phòng
+CREATE OR REPLACE FUNCTION fn_TienThuePhong(p_MaPhongDoc VARCHAR(8), p_BatDau DATETIME, p_KetThuc DATETIME)
+RETURNS DECIMAL(12,0) READS SQL DATA
+  RETURN TIMESTAMPDIFF(HOUR, p_BatDau, p_KetThuc) *
+         (SELECT l.GiaMoiGio FROM PHONG_DOC p JOIN LOAI_PHONG l ON l.MaLoaiPhong = p.MaLoaiPhong
+          WHERE p.MaPhongDoc = p_MaPhongDoc) //
+
 -- Sinh mã kế tiếp dạng <tiền tố><số> (vd DG0201, TT016)
 CREATE OR REPLACE FUNCTION fn_MaNguoiMoi(p_Loai CHAR(2)) RETURNS VARCHAR(10)
 READS SQL DATA
@@ -326,5 +333,19 @@ CREATE OR REPLACE PROCEDURE sp_PhongDoc_TimKiem(IN p_MaChiNhanh CHAR(4), IN p_Ma
     AND (p_MaLoai IS NULL OR p.MaLoaiPhong = p_MaLoai)
     AND (p_SoNguoi IS NULL OR p.SucChua >= p_SoNguoi)
   ORDER BY p.MaPhongDoc //
+
+-- Báo giá trước khi đặt phòng: giao diện gọi lại mỗi khi đổi phòng / khung giờ / số người
+CREATE OR REPLACE PROCEDURE sp_ThuePhong_BaoGia(IN p_MaPhongDoc VARCHAR(8), IN p_BatDau DATETIME,
+       IN p_KetThuc DATETIME, IN p_SoNguoi SMALLINT)
+  SELECT l.TenLoai, l.GiaMoiGio, TIMESTAMPDIFF(HOUR, p_BatDau, p_KetThuc) AS SoGio,
+         fn_TienThuePhong(p_MaPhongDoc, p_BatDau, p_KetThuc) AS TongTien,
+         CASE WHEN TIMESTAMPDIFF(HOUR, p_BatDau, p_KetThuc) NOT BETWEEN l.SoGioToiThieu AND l.SoGioToiDa
+                THEN CONCAT('E203: Số giờ thuê không đúng quy định của loại phòng (',
+                            l.SoGioToiThieu, '–', l.SoGioToiDa, ' giờ)')
+              WHEN p_SoNguoi > p.SucChua
+                THEN CONCAT('E202: Số người vượt sức chứa của phòng (tối đa ', p.SucChua, ' người)')
+         END AS CanhBao
+  FROM PHONG_DOC p JOIN LOAI_PHONG l ON l.MaLoaiPhong = p.MaLoaiPhong
+  WHERE p.MaPhongDoc = p_MaPhongDoc //
 
 DELIMITER ;

@@ -72,9 +72,17 @@ elif trang == "Phòng đọc":
             ngay = st.date_input("Ngày sử dụng", date.today())
             gio = st.slider("Khung giờ", 7, 21, (9, 11))
             so_nguoi = st.number_input("Số người", 1, 200, 4)
+            bd, kt = datetime.combine(ngay, time(gio[0])), datetime.combine(ngay, time(gio[1]))
+            bg = bang("sp_ThuePhong_BaoGia", phong, bd, kt, so_nguoi) if phong else None
+            if bg is not None and not bg.empty:   # Streamlit chạy lại mỗi lần đổi giá trị → giá cập nhật ngay
+                r = bg.iloc[0]
+                st.metric("Tiền thuê dự kiến", f"{r.TongTien:,.0f} đ".replace(",", "."))
+                st.caption(f"{r.TenLoai}: {r.GiaMoiGio:,.0f} đ/giờ × {r.SoGio} giờ".replace(",", "."))
+                if r.CanhBao:
+                    st.warning(r.CanhBao)
             if st.button("Đặt phòng", type="primary"):
                 chay(lambda: "phiếu %s, %s đ" % tuple(goi("sp_ThuePhong", dg, phong, ma_thu_thu,
-                     datetime.combine(ngay, time(gio[0])), datetime.combine(ngay, time(gio[1])), so_nguoi, date.today(), so_out=2)[1]), "Đã đặt")
+                     bd, kt, so_nguoi, date.today(), so_out=2)[1]), "Đã đặt")
         with c2:
             thoi_diem = st.text_input("Xem tình trạng phòng tại thời điểm", datetime.now().strftime("%Y-%m-%d %H:00"))
             st.dataframe(bang("sp_BC_PhongTaiThoiDiem", chi_nhanh, thoi_diem), use_container_width=True)

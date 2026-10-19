@@ -227,7 +227,6 @@ CREATE OR REPLACE PROCEDURE sp_ThuePhong(IN p_MaDocGia VARCHAR(10), IN p_MaPhong
        IN p_NgayDat DATE, OUT p_MaPhieuThue INT, OUT p_TongTien DECIMAL(12,0))
 BEGIN
   DECLARE v_SucChua SMALLINT;
-  DECLARE v_Gia DECIMAL(12,0);
   DECLARE v_Min, v_Max TINYINT;
   DECLARE v_Loai VARCHAR(8);
   DECLARE v_Mo, v_Dong TIME;
@@ -236,8 +235,8 @@ BEGIN
   SET p_NgayDat = COALESCE(p_NgayDat, CURDATE());
   START TRANSACTION;
     -- khóa phòng: các giao dịch đặt cùng phòng chạy tuần tự, TRG7 kiểm tra trùng giờ chính xác
-    SELECT p.SucChua, l.GiaMoiGio, l.SoGioToiThieu, l.SoGioToiDa, l.MaLoaiPhong, cn.GioMo, cn.GioDong
-      INTO v_SucChua, v_Gia, v_Min, v_Max, v_Loai, v_Mo, v_Dong
+    SELECT p.SucChua, l.SoGioToiThieu, l.SoGioToiDa, l.MaLoaiPhong, cn.GioMo, cn.GioDong
+      INTO v_SucChua, v_Min, v_Max, v_Loai, v_Mo, v_Dong
     FROM PHONG_DOC p JOIN LOAI_PHONG l ON l.MaLoaiPhong = p.MaLoaiPhong
                      JOIN CHI_NHANH cn ON cn.MaChiNhanh = p.MaChiNhanh
     WHERE p.MaPhongDoc = p_MaPhongDoc FOR UPDATE;
@@ -259,7 +258,7 @@ BEGIN
     IF TIME(p_BatDau) < v_Mo OR TIME(p_KetThuc) > v_Dong THEN
       SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'E204: Ngoài giờ mở cửa của chi nhánh';
     END IF;
-    SET p_TongTien = v_SoGio * v_Gia;
+    SET p_TongTien = fn_TienThuePhong(p_MaPhongDoc, p_BatDau, p_KetThuc);   -- cùng công thức với báo giá
     INSERT INTO PHIEU_THUE_PHONG(MaDocGia, MaPhongDoc, MaThuThuDuyet, NgayDat, BatDau, KetThuc,
                                  SoNguoi, MucDich, TongTien)
     VALUES (p_MaDocGia, p_MaPhongDoc, p_MaThuThu, p_NgayDat, p_BatDau, p_KetThuc, p_SoNguoi,
