@@ -247,11 +247,11 @@ Tổng cộng: 23 khóa chính, 34 khóa ngoại, 11 ràng buộc UNIQUE, 44 rà
 
 ### 4.6 Danh sách function và stored procedure
 
-7 function: `fn_HanTra`, `fn_MaNguoiMoi`, `fn_NoPhat`, `fn_SoSachDangMuon`, `fn_TheConHan`, `fn_TinhTienPhat`, `fn_Tuoi`.
+8 function: `fn_HanTra`, `fn_MaNguoiMoi`, `fn_NoPhat`, `fn_SoSachDangMuon`, `fn_TheConHan`, `fn_TienThuePhong`, `fn_TinhTienPhat`, `fn_Tuoi`.
 
 - **Transaction nghiệp vụ (TX1–TX7)** (7): `sp_DangKyDocGia`, `sp_MuonSach`, `sp_NhapLoSach`, `sp_ThanhLySach`, `sp_ThanhToanPhat`, `sp_ThuePhong`, `sp_TraSach`
 - **Báo cáo** (7): `sp_BC_DauSachLuotMuon`, `sp_BC_DocGiaTraMuon`, `sp_BC_PhongTaiThoiDiem`, `sp_BC_SachDaMuon`, `sp_BC_SachDangMuon`, `sp_BC_SachQuaHan`, `sp_BC_SachSapHetHan`
-- **Thêm / xóa / sửa / tìm kiếm** (31): `sp_ChiNhanh_Sua`, `sp_ChiNhanh_Them`, `sp_ChiNhanh_TimKiem`, `sp_ChiNhanh_Xoa`, `sp_CuonSach_ChuyenGia`, `sp_CuonSach_TimKiem`, `sp_CuonSach_Xoa`, `sp_DauSach_Sua`, `sp_DauSach_Them`, `sp_DauSach_TimKiem`, `sp_DauSach_Xoa`, `sp_DocGia_GiaHanThe`, `sp_DocGia_Sua`, `sp_DocGia_TimKiem`, `sp_DocGia_Xoa`, `sp_GiaSach_Sua`, `sp_GiaSach_Them`, `sp_GiaSach_TimKiem`, `sp_GiaSach_Xoa`, `sp_PhongDoc_Sua`, `sp_PhongDoc_Them`, `sp_PhongDoc_TimKiem`, `sp_PhongDoc_Xoa`, `sp_PhongKho_Sua`, `sp_PhongKho_Them`, `sp_PhongKho_TimKiem`, `sp_PhongKho_Xoa`, `sp_ThuThu_Sua`, `sp_ThuThu_Them`, `sp_ThuThu_TimKiem`, `sp_ThuThu_Xoa`
+- **Thêm / xóa / sửa / tìm kiếm** (32): `sp_ChiNhanh_Sua`, `sp_ChiNhanh_Them`, `sp_ChiNhanh_TimKiem`, `sp_ChiNhanh_Xoa`, `sp_CuonSach_ChuyenGia`, `sp_CuonSach_TimKiem`, `sp_CuonSach_Xoa`, `sp_DauSach_Sua`, `sp_DauSach_Them`, `sp_DauSach_TimKiem`, `sp_DauSach_Xoa`, `sp_DocGia_GiaHanThe`, `sp_DocGia_Sua`, `sp_DocGia_TimKiem`, `sp_DocGia_Xoa`, `sp_GiaSach_Sua`, `sp_GiaSach_Them`, `sp_GiaSach_TimKiem`, `sp_GiaSach_Xoa`, `sp_PhongDoc_Sua`, `sp_PhongDoc_Them`, `sp_PhongDoc_TimKiem`, `sp_PhongDoc_Xoa`, `sp_PhongKho_Sua`, `sp_PhongKho_Them`, `sp_PhongKho_TimKiem`, `sp_PhongKho_Xoa`, `sp_ThuePhong_BaoGia`, `sp_ThuThu_Sua`, `sp_ThuThu_Them`, `sp_ThuThu_TimKiem`, `sp_ThuThu_Xoa`
 
 ### 4.9 Kết quả kiểm thử tự động (08_test.sql)
 

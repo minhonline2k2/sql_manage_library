@@ -62,7 +62,7 @@ Tại mỗi chi nhánh:
 | Mỗi phiếu trả ≥ 1 cuốn | Đề | Transaction TX2 |
 | Mỗi giá ≤ sức chứa (100) | Nhóm | CHECK + trigger TRG6 |
 | Số người thuê ≤ sức chứa phòng | Nhóm | Transaction TX7 |
-| Mỗi chi nhánh đúng 1 thủ thư trưởng; 1 thủ thư trưởng 1 chi nhánh | Nhóm | NOT NULL + UNIQUE |
+| Mỗi chi nhánh đúng 1 thủ thư trưởng; 1 thủ thư trưởng 1 chi nhánh | Nhóm | UNIQUE + FK; cột tạm cho phép NULL vì khóa ngoại vòng CHI_NHANH ↔ THU_THU (MariaDB không có ràng buộc trì hoãn), được gán ngay sau khi tạo thủ thư; không xóa được thủ thư đang là trưởng (E403) |
 | Mỗi độc giả đúng 1 thẻ | Nhóm | UNIQUE trên khóa ngoại |
 | Mỗi người ≥ 1 số điện thoại | Nhóm | Transaction TX6 |
 
@@ -143,11 +143,11 @@ Tại mỗi chi nhánh:
 | ISA (disjoint, toàn bộ) | NGUOI → DOC_GIA, THU_THU |
 | Kết hợp (aggregation) | tra_lai, bi_phat trên [gom_sach] |
 | Ràng buộc (min,max) | (1,10) cuốn/phiếu; (0,50) cuốn/độc giả |
-| Tham gia toàn bộ / một phần | CHI_NHANH – truong_chi_nhanh (toàn bộ); THU_THU (một phần) |
+| Tham gia toàn bộ / một phần | CHI_NHANH – truong_chi_nhanh (toàn bộ: hai vạch ở đầu THU_THU); THU_THU (một phần: vòng tròn ở đầu CHI_NHANH) |
 
 ## 2.4 Sơ đồ E-R
 
-Sơ đồ dùng ký hiệu Chen như bài giảng: chữ nhật = tập thực thể, chữ nhật kép = thực thể yếu, thoi = liên kết, thoi kép = liên kết xác định, ellipse = thuộc tính (gạch chân = khóa, gạch chân mảnh = khóa bán phần, nét đứt = dẫn xuất, viền kép = đa trị), tam giác ISA có chữ d = phân tách (disjoint), đường đôi = tham gia toàn bộ, thoi nét đứt gom_sach = kết hợp (aggregation), thoi màu cam thue_phong = liên kết 3 ngôi giữa DOC_GIA, PHONG_DOC và THU_THU (thủ thư duyệt) mang các thuộc tính của lượt thuê.
+Sơ đồ dùng ký hiệu Chen như bài giảng: chữ nhật = tập thực thể, chữ nhật kép = thực thể yếu, thoi = liên kết, thoi kép = liên kết xác định, ellipse = thuộc tính (gạch chân = khóa, gạch chân mảnh = khóa bán phần, nét đứt = dẫn xuất, viền kép = đa trị), tam giác ISA có chữ d = phân tách (disjoint), thoi nét đứt gom_sach = kết hợp (aggregation), thoi màu cam thue_phong = liên kết 3 ngôi giữa DOC_GIA, PHONG_DOC và THU_THU (thủ thư duyệt) mang các thuộc tính của lượt thuê. Ký hiệu đường nối theo chuẩn chân gà (crow's foot), đặt ở đầu sát thực thể và đọc ngang qua liên kết (số thực thể phía đó ứng với một thực thể phía bên kia): vạch + vòng tròn = không hoặc một (0..1); hai vạch = một và chỉ một (1); chân gà + vòng tròn = không hoặc nhiều (0..N); chân gà + vạch = một hoặc nhiều (1..N). Vạch (min = 1) ở đầu bên kia thể hiện thực thể tham gia toàn bộ, vòng tròn (min = 0) là tham gia một phần. Giới hạn cụ thể ghi kèm: tối đa 10 cuốn mỗi phiếu (gom_sach), tối đa 50 cuốn mỗi độc giả (giu_sach). Riêng tổng quát hóa ISA dùng đường đôi = tổng quát hóa đầy đủ.
 
 ![Hình 2.1. Lược đồ E-R của hệ thống quản lý thư viện](../erd/erd_doc.png)
 
@@ -305,7 +305,7 @@ G = { MaCuonSach → MaDauSach, STT, MaTheLoai;  MaDauSach → MaTheLoai;  MaDau
 
 ## 3.7 Sơ đồ lược đồ quan hệ
 
-Sơ đồ được sinh tự động từ `information_schema` của CSDL đã cài đặt (script `gen_tudien.py`): mỗi khung là một quan hệ, khóa chính in đậm gạch chân, khóa ngoại in nghiêng, mũi tên đi từ khóa ngoại đến khóa chính được tham chiếu. Màu nền tiêu đề chia 4 nhóm nghiệp vụ: con người (xanh dương), sách và kho (xanh lá), mượn trả (cam), phòng đọc (vàng).
+Sơ đồ được sinh tự động từ `information_schema` của CSDL đã cài đặt (script `gen_tudien.py`): mỗi khung là một quan hệ, khóa chính in đậm gạch chân, khóa ngoại in nghiêng, mỗi cạnh nối cột khóa ngoại với khóa chính được tham chiếu và dùng ký hiệu chân gà suy ra từ ràng buộc thật: đầu bảng chứa khóa ngoại là không hoặc nhiều (không hoặc một nếu cột khóa ngoại là UNIQUE), đầu bảng được tham chiếu là một và chỉ một (không hoặc một nếu khóa ngoại cho phép NULL). Màu nền tiêu đề chia 4 nhóm nghiệp vụ: con người (xanh dương), sách và kho (xanh lá), mượn trả (cam), phòng đọc (vàng).
 
 ![Hình 3.1. Sơ đồ lược đồ quan hệ với các liên kết khóa chính – khóa ngoại](../erd/luoc_do_quan_he.png)
 
@@ -557,7 +557,7 @@ Từ điển dữ liệu được trích tự động từ `information_schema` 
 | File | Nội dung |
 | --- | --- |
 | 01_schema.sql | Tạo database QLTV, 23 bảng và toàn bộ ràng buộc PK, FK, UNIQUE, CHECK, DEFAULT |
-| 02_function_procedure.sql | 7 function nghiệp vụ, các procedure thêm/xóa/sửa/tìm kiếm |
+| 02_function_procedure.sql | 8 function nghiệp vụ, các procedure thêm/xóa/sửa/tìm kiếm |
 | 03_trigger.sql | 8 trigger nghiệp vụ (18 trigger con) |
 | 04_transaction.sql | 7 transaction nghiệp vụ dạng procedure |
 | 05_seed.sql | Dữ liệu 3 tháng, sinh bởi gen_seed.py bằng cách gọi chính các transaction |
@@ -836,11 +836,11 @@ Tổng cộng: 23 khóa chính, 34 khóa ngoại, 11 ràng buộc UNIQUE, 44 rà
 
 ## 4.6 Danh sách function và stored procedure
 
-7 function: `fn_HanTra`, `fn_MaNguoiMoi`, `fn_NoPhat`, `fn_SoSachDangMuon`, `fn_TheConHan`, `fn_TinhTienPhat`, `fn_Tuoi`.
+8 function: `fn_HanTra`, `fn_MaNguoiMoi`, `fn_NoPhat`, `fn_SoSachDangMuon`, `fn_TheConHan`, `fn_TienThuePhong`, `fn_TinhTienPhat`, `fn_Tuoi`.
 
 - **Transaction nghiệp vụ (TX1–TX7)** (7): `sp_DangKyDocGia`, `sp_MuonSach`, `sp_NhapLoSach`, `sp_ThanhLySach`, `sp_ThanhToanPhat`, `sp_ThuePhong`, `sp_TraSach`
 - **Báo cáo** (7): `sp_BC_DauSachLuotMuon`, `sp_BC_DocGiaTraMuon`, `sp_BC_PhongTaiThoiDiem`, `sp_BC_SachDaMuon`, `sp_BC_SachDangMuon`, `sp_BC_SachQuaHan`, `sp_BC_SachSapHetHan`
-- **Thêm / xóa / sửa / tìm kiếm** (31): `sp_ChiNhanh_Sua`, `sp_ChiNhanh_Them`, `sp_ChiNhanh_TimKiem`, `sp_ChiNhanh_Xoa`, `sp_CuonSach_ChuyenGia`, `sp_CuonSach_TimKiem`, `sp_CuonSach_Xoa`, `sp_DauSach_Sua`, `sp_DauSach_Them`, `sp_DauSach_TimKiem`, `sp_DauSach_Xoa`, `sp_DocGia_GiaHanThe`, `sp_DocGia_Sua`, `sp_DocGia_TimKiem`, `sp_DocGia_Xoa`, `sp_GiaSach_Sua`, `sp_GiaSach_Them`, `sp_GiaSach_TimKiem`, `sp_GiaSach_Xoa`, `sp_PhongDoc_Sua`, `sp_PhongDoc_Them`, `sp_PhongDoc_TimKiem`, `sp_PhongDoc_Xoa`, `sp_PhongKho_Sua`, `sp_PhongKho_Them`, `sp_PhongKho_TimKiem`, `sp_PhongKho_Xoa`, `sp_ThuThu_Sua`, `sp_ThuThu_Them`, `sp_ThuThu_TimKiem`, `sp_ThuThu_Xoa`
+- **Thêm / xóa / sửa / tìm kiếm** (32): `sp_ChiNhanh_Sua`, `sp_ChiNhanh_Them`, `sp_ChiNhanh_TimKiem`, `sp_ChiNhanh_Xoa`, `sp_CuonSach_ChuyenGia`, `sp_CuonSach_TimKiem`, `sp_CuonSach_Xoa`, `sp_DauSach_Sua`, `sp_DauSach_Them`, `sp_DauSach_TimKiem`, `sp_DauSach_Xoa`, `sp_DocGia_GiaHanThe`, `sp_DocGia_Sua`, `sp_DocGia_TimKiem`, `sp_DocGia_Xoa`, `sp_GiaSach_Sua`, `sp_GiaSach_Them`, `sp_GiaSach_TimKiem`, `sp_GiaSach_Xoa`, `sp_PhongDoc_Sua`, `sp_PhongDoc_Them`, `sp_PhongDoc_TimKiem`, `sp_PhongDoc_Xoa`, `sp_PhongKho_Sua`, `sp_PhongKho_Them`, `sp_PhongKho_TimKiem`, `sp_PhongKho_Xoa`, `sp_ThuePhong_BaoGia`, `sp_ThuThu_Sua`, `sp_ThuThu_Them`, `sp_ThuThu_TimKiem`, `sp_ThuThu_Xoa`
 
 ## 4.7 Đặc tả trigger và transaction nghiệp vụ
 
@@ -1057,7 +1057,7 @@ Kết quả: **47/47 ca PASS**.
 
 ## 4.13 Giao diện ứng dụng
 
-Ứng dụng có 7 chức năng ở thanh bên trái (mượn sách; trả sách và phạt; phòng đọc; độc giả; sách và kho; thủ thư và chi nhánh; báo cáo); người dùng chọn chi nhánh và thủ thư thao tác. Mỗi đối tượng chính đều có đủ thêm, sửa, xóa, tìm kiếm trên giao diện: độc giả, thủ thư, chi nhánh (đổi thủ thư trưởng), đầu sách, cuốn sách (chuyển giá, xóa, thanh lý), giá sách, phòng kho, phòng đọc. Mỗi nút bấm gọi đúng một stored procedure; khi CSDL từ chối (SIGNAL, CHECK, khóa ngoại), giao diện hiển thị nguyên văn thông báo lỗi, chứng tỏ luật nghiệp vụ nằm hoàn toàn trong CSDL. Kết nối dùng tài khoản `ql_thuvien` (vai trò r_QuanLy), không có quyền ghi trực tiếp vào bảng.
+Ứng dụng có 7 chức năng ở thanh bên trái (mượn sách; trả sách và phạt; phòng đọc; độc giả; sách và kho; thủ thư và chi nhánh; báo cáo); người dùng chọn chi nhánh và thủ thư thao tác. Mỗi đối tượng chính đều có đủ thêm, sửa, xóa, tìm kiếm trên giao diện: độc giả, thủ thư, chi nhánh (đổi thủ thư trưởng), đầu sách, cuốn sách (chuyển giá, xóa, thanh lý), giá sách, phòng kho, phòng đọc. Các bảng dữ liệu bấm chọn được cả hàng: form sửa/xóa lấy theo hàng đang chọn và bảng tự nạp lại, bỏ chọn sau mỗi thao tác; các mã đã có trong CSDL (độc giả, cuốn sách khi mượn/trả, phòng, giá, đầu sách khi nhập lô) được chọn từ danh sách có ô gõ để lọc thay vì gõ tay. Trang phòng đọc hiện tiền thuê dự kiến (procedure `sp_ThuePhong_BaoGia`, dùng chung function `fn_TienThuePhong` với TX7) cùng cảnh báo E202/E203 ngay khi đổi phòng, khung giờ hoặc số người. Mỗi nút bấm gọi đúng một stored procedure; khi CSDL từ chối (SIGNAL, CHECK, khóa ngoại), giao diện hiển thị nguyên văn thông báo lỗi, chứng tỏ luật nghiệp vụ nằm hoàn toàn trong CSDL. Kết nối dùng tài khoản `ql_thuvien` (vai trò r_QuanLy), không có quyền ghi trực tiếp vào bảng.
 
 Giao diện được kiểm thử tự động bằng Playwright (script `app/chup_man_hinh.py`): trình duyệt mở từng màn hình, nhập dữ liệu, bấm nút và đọc thông báo trả về. Kết quả: **23/23 thao tác đúng kỳ vọng**.
 
@@ -1065,15 +1065,15 @@ Giao diện được kiểm thử tự động bằng Playwright (script `app/ch
 | --- | --- | --- | --- | --- |
 | 1 | Lập phiếu mượn | Thành công | Đã lập phiếu mượn số: 832 | PASS |
 | 2 | Lập phiếu mượn | Bị chặn | E101: Mỗi lần mượn tối đa 10 cuốn sách | PASS |
-| 3 | Lập phiếu trả | Thành công | Đã trả: phiếu 1569, tiền phạt 3170000 đ | PASS |
-| 4 | Thanh toán toàn bộ phạt | Thành công | Đã thu: 3,170,000 đ | PASS |
+| 3 | Lập phiếu trả | Thành công | Đã trả: phiếu 1569, tiền phạt 3230000 đ | PASS |
+| 4 | Thanh toán toàn bộ phạt | Thành công | Đã thu: 3,230,000 đ | PASS |
 | 5 | Thêm phòng | Thành công | Đã thêm phòng CN01-N6 | PASS |
 | 6 | Sửa tên / sức chứa | Thành công | Đã sửa phòng CN01-N6 | PASS |
 | 7 | Xóa phòng | Thành công | Đã xóa phòng CN01-N6 | PASS |
 | 8 | Đăng ký | Thành công | Đã đăng ký: mã DG0201, thẻ THE0201 | PASS |
-| 9 | Lưu sửa | Thành công | Thành công | PASS |
-| 10 | Gia hạn thẻ 1 năm | Thành công | Thành công | PASS |
-| 11 | Xóa độc giả | Thành công | Thành công | PASS |
+| 9 | Lưu sửa | Thành công | Đã sửa DG0201 | PASS |
+| 10 | Gia hạn thẻ 1 năm | Thành công | Đã gia hạn thẻ DG0201 | PASS |
+| 11 | Xóa độc giả | Thành công | Đã xóa DG0201 | PASS |
 | 12 | Xóa độc giả | Bị chặn | E404: Độc giả còn giữ sách, không xóa được | PASS |
 | 13 | Thêm phòng kho | Thành công | Đã thêm CN01-K3 | PASS |
 | 14 | Thêm giá | Thành công | Đã thêm giá CN01-K1-TR9 | PASS |
@@ -1099,11 +1099,11 @@ Giao diện được kiểm thử tự động bằng Playwright (script `app/ch
 
 ![Hình 4.12. Thanh toán toàn bộ phạt (TX3)](../anh/03b_thanh_toan_phat.png)
 
-![Hình 4.13. Màn hình thuê phòng đọc và tình trạng phòng](../anh/04_thue_phong.png)
+![Hình 4.13. Màn hình thuê phòng đọc: tiền thuê dự kiến cập nhật theo phòng, khung giờ và tình trạng phòng](../anh/04_thue_phong.png)
 
 ![Hình 4.14. Quản lý phòng đọc: thêm phòng mới thành công](../anh/04a_them_phong_doc.png)
 
-![Hình 4.15. Quản lý độc giả: tìm kiếm](../anh/05_doc_gia.png)
+![Hình 4.15. Quản lý độc giả: danh sách, bấm chọn hàng để sửa, gia hạn, xóa](../anh/05_doc_gia.png)
 
 ![Hình 4.16. Đăng ký độc giả mới (TX6) thành công](../anh/05a_dang_ky_doc_gia.png)
 
@@ -1204,7 +1204,8 @@ Tương tự, **THU_THU, PHONG_KHO, PHONG_DOC** được phân mảnh ngang nguy
 
 Nhận xét:
 - Xảy ra **phân mảnh dây chuyền** giống ví dụ PAY → EMP → ASG trong slide: DOC_GIA → PHIEU_MUON → CT_MUON → PHIEU_PHAT và PHONG_KHO → GIA_SACH → CUON_SACH.
-- CT_MUON có hai owner có thể chọn (PHIEU_MUON và CUON_SACH). Nhóm chọn PHIEU_MUON vì (1) đặc tính kết nối tốt hơn: các truy vấn mượn/trả và báo cáo luôn kết nối CT_MUON với PHIEU_MUON và độc giả; (2) phục vụ nhiều ứng dụng hơn (mượn, trả, phạt, báo cáo 1, 2, 4). Do độc giả chỉ mượn sách tại chi nhánh mình, CT_MUON_k ⋈ CUON_SACH_k vẫn hoàn toàn cục bộ.
+- CT_MUON có hai owner có thể chọn (PHIEU_MUON và CUON_SACH). Nhóm chọn PHIEU_MUON vì (1) đặc tính kết nối tốt hơn: các truy vấn mượn/trả và báo cáo luôn kết nối CT_MUON với PHIEU_MUON và độc giả; (2) phục vụ nhiều ứng dụng hơn (mượn, trả, phạt, báo cáo 1, 2, 4). Theo số liệu, độc giả mượn sách tại chi nhánh mình đăng ký (dữ liệu demo: 0 lượt mượn khác chi nhánh), nên CT_MUON_k ⋈ CUON_SACH_k hoàn toàn cục bộ.
+- Nghiệp vụ vẫn **cho phép mượn liên chi nhánh** (CSDL không cấm). Khi đó dòng CT_MUON thuộc mảnh của chi nhánh độc giả (dẫn xuất theo PHIEU_MUON), còn cuốn sách nằm ở mảnh CUON_SACH của site khác: giao tác mượn/trả phải cập nhật hai site (trạng thái cuốn, số lượng trên giá) nên cần giao tác phân tán (cam kết hai pha); truy vấn ghép CT_MUON với CUON_SACH khi đó phải truy cập site xa. Vì tần suất thấp, nhóm chấp nhận chi phí này thay vì nhân bản CUON_SACH.
 
 ## 5.5 Phân mảnh dọc và phân mảnh lai NGUOI (phần độc giả)
 
@@ -1308,7 +1309,7 @@ Nhóm đã xây dựng hoàn chỉnh hệ CSDL quản lý thư viện theo kịc
 
 - Lược đồ E-R có đủ các loại tập thực thể (mạnh, yếu, ISA), thuộc tính (đơn, kép, đa trị, dẫn xuất, rỗng) và liên kết (1:1, 1:N, N:N, đệ quy, 3 ngôi, xác định, kết hợp, ràng buộc min-max).
 - 23 lược đồ quan hệ ở dạng chuẩn BCNF, có phụ thuộc hàm, khóa, quá trình chuẩn hóa minh họa, sơ đồ khóa chính – khóa ngoại và từ điển dữ liệu.
-- Cài đặt trên MariaDB với 23 khóa chính, 34 khóa ngoại, 11 UNIQUE, 44 CHECK; 8 trigger, 7 transaction, 7 function và các procedure thêm/xóa/sửa/tìm kiếm cho mọi đối tượng.
+- Cài đặt trên MariaDB với 23 khóa chính, 34 khóa ngoại, 11 UNIQUE, 44 CHECK; 8 trigger, 7 transaction, 8 function và các procedure thêm/xóa/sửa/tìm kiếm cho mọi đối tượng.
 - Dữ liệu vận hành 3 tháng ở 3 chi nhánh (300 đầu sách, 1.623 cuốn, 200 độc giả, 831 phiếu mượn, 2.217 lượt mượn); 6 truy vấn hiển thị theo đúng yêu cầu sắp xếp của đề; chỉ mục, phân quyền và 47 ca kiểm thử tự động đều đạt.
 - Giao diện có đủ thêm/xóa/sửa/tìm kiếm cho các đối tượng chính, 23 thao tác được kiểm thử tự động bằng trình duyệt đều cho kết quả đúng kỳ vọng.
 - Thiết kế phân tán cho 3 site: phân mảnh ngang nguyên thủy (COM_MIN, PHORIZONTAL), dẫn xuất, dọc (BEA), lai; cấp phát, nhân bản; minh họa cài đặt và kiểm chứng 3 quy tắc phân mảnh (36/36 đạt).
@@ -1726,6 +1727,13 @@ BEGIN
   RETURN v_CoBan + v_MoiNgay * v_Tre;
 END //
 
+-- Thuộc tính dẫn xuất TongTien của lượt thuê phòng = số giờ × giá/giờ của loại phòng
+CREATE OR REPLACE FUNCTION fn_TienThuePhong(p_MaPhongDoc VARCHAR(8), p_BatDau DATETIME, p_KetThuc DATETIME)
+RETURNS DECIMAL(12,0) READS SQL DATA
+  RETURN TIMESTAMPDIFF(HOUR, p_BatDau, p_KetThuc) *
+         (SELECT l.GiaMoiGio FROM PHONG_DOC p JOIN LOAI_PHONG l ON l.MaLoaiPhong = p.MaLoaiPhong
+          WHERE p.MaPhongDoc = p_MaPhongDoc) //
+
 -- Sinh mã kế tiếp dạng <tiền tố><số> (vd DG0201, TT016)
 CREATE OR REPLACE FUNCTION fn_MaNguoiMoi(p_Loai CHAR(2)) RETURNS VARCHAR(10)
 READS SQL DATA
@@ -1993,6 +2001,20 @@ CREATE OR REPLACE PROCEDURE sp_PhongDoc_TimKiem(IN p_MaChiNhanh CHAR(4), IN p_Ma
     AND (p_MaLoai IS NULL OR p.MaLoaiPhong = p_MaLoai)
     AND (p_SoNguoi IS NULL OR p.SucChua >= p_SoNguoi)
   ORDER BY p.MaPhongDoc //
+
+-- Báo giá trước khi đặt phòng: giao diện gọi lại mỗi khi đổi phòng / khung giờ / số người
+CREATE OR REPLACE PROCEDURE sp_ThuePhong_BaoGia(IN p_MaPhongDoc VARCHAR(8), IN p_BatDau DATETIME,
+       IN p_KetThuc DATETIME, IN p_SoNguoi SMALLINT)
+  SELECT l.TenLoai, l.GiaMoiGio, TIMESTAMPDIFF(HOUR, p_BatDau, p_KetThuc) AS SoGio,
+         fn_TienThuePhong(p_MaPhongDoc, p_BatDau, p_KetThuc) AS TongTien,
+         CASE WHEN TIMESTAMPDIFF(HOUR, p_BatDau, p_KetThuc) NOT BETWEEN l.SoGioToiThieu AND l.SoGioToiDa
+                THEN CONCAT('E203: Số giờ thuê không đúng quy định của loại phòng (',
+                            l.SoGioToiThieu, '–', l.SoGioToiDa, ' giờ)')
+              WHEN p_SoNguoi > p.SucChua
+                THEN CONCAT('E202: Số người vượt sức chứa của phòng (tối đa ', p.SucChua, ' người)')
+         END AS CanhBao
+  FROM PHONG_DOC p JOIN LOAI_PHONG l ON l.MaLoaiPhong = p.MaLoaiPhong
+  WHERE p.MaPhongDoc = p_MaPhongDoc //
 
 DELIMITER ;
 ```
@@ -2478,7 +2500,6 @@ CREATE OR REPLACE PROCEDURE sp_ThuePhong(IN p_MaDocGia VARCHAR(10), IN p_MaPhong
        IN p_NgayDat DATE, OUT p_MaPhieuThue INT, OUT p_TongTien DECIMAL(12,0))
 BEGIN
   DECLARE v_SucChua SMALLINT;
-  DECLARE v_Gia DECIMAL(12,0);
   DECLARE v_Min, v_Max TINYINT;
   DECLARE v_Loai VARCHAR(8);
   DECLARE v_Mo, v_Dong TIME;
@@ -2487,8 +2508,8 @@ BEGIN
   SET p_NgayDat = COALESCE(p_NgayDat, CURDATE());
   START TRANSACTION;
     -- khóa phòng: các giao dịch đặt cùng phòng chạy tuần tự, TRG7 kiểm tra trùng giờ chính xác
-    SELECT p.SucChua, l.GiaMoiGio, l.SoGioToiThieu, l.SoGioToiDa, l.MaLoaiPhong, cn.GioMo, cn.GioDong
-      INTO v_SucChua, v_Gia, v_Min, v_Max, v_Loai, v_Mo, v_Dong
+    SELECT p.SucChua, l.SoGioToiThieu, l.SoGioToiDa, l.MaLoaiPhong, cn.GioMo, cn.GioDong
+      INTO v_SucChua, v_Min, v_Max, v_Loai, v_Mo, v_Dong
     FROM PHONG_DOC p JOIN LOAI_PHONG l ON l.MaLoaiPhong = p.MaLoaiPhong
                      JOIN CHI_NHANH cn ON cn.MaChiNhanh = p.MaChiNhanh
     WHERE p.MaPhongDoc = p_MaPhongDoc FOR UPDATE;
@@ -2510,7 +2531,7 @@ BEGIN
     IF TIME(p_BatDau) < v_Mo OR TIME(p_KetThuc) > v_Dong THEN
       SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'E204: Ngoài giờ mở cửa của chi nhánh';
     END IF;
-    SET p_TongTien = v_SoGio * v_Gia;
+    SET p_TongTien = fn_TienThuePhong(p_MaPhongDoc, p_BatDau, p_KetThuc);   -- cùng công thức với báo giá
     INSERT INTO PHIEU_THUE_PHONG(MaDocGia, MaPhongDoc, MaThuThuDuyet, NgayDat, BatDau, KetThuc,
                                  SoNguoi, MucDich, TongTien)
     VALUES (p_MaDocGia, p_MaPhongDoc, p_MaThuThu, p_NgayDat, p_BatDau, p_KetThuc, p_SoNguoi,
@@ -2707,6 +2728,7 @@ GRANT EXECUTE ON PROCEDURE QLTV.sp_DauSach_TimKiem    TO r_ThuThu;
 GRANT EXECUTE ON PROCEDURE QLTV.sp_CuonSach_TimKiem   TO r_ThuThu;
 GRANT EXECUTE ON PROCEDURE QLTV.sp_PhongDoc_TimKiem   TO r_ThuThu;
 GRANT EXECUTE ON PROCEDURE QLTV.sp_ThuePhong          TO r_ThuThu;
+GRANT EXECUTE ON PROCEDURE QLTV.sp_ThuePhong_BaoGia   TO r_ThuThu;
 GRANT EXECUTE ON PROCEDURE QLTV.sp_BC_SachDangMuon    TO r_ThuThu;
 GRANT EXECUTE ON PROCEDURE QLTV.sp_BC_SachDaMuon      TO r_ThuThu;
 GRANT EXECUTE ON PROCEDURE QLTV.sp_BC_SachQuaHan      TO r_ThuThu;

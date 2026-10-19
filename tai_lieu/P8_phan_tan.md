@@ -79,7 +79,8 @@ Tương tự, **THU_THU, PHONG_KHO, PHONG_DOC** được phân mảnh ngang nguy
 
 Nhận xét:
 - Xảy ra **phân mảnh dây chuyền** giống ví dụ PAY → EMP → ASG trong slide: DOC_GIA → PHIEU_MUON → CT_MUON → PHIEU_PHAT và PHONG_KHO → GIA_SACH → CUON_SACH.
-- CT_MUON có hai owner có thể chọn (PHIEU_MUON và CUON_SACH). Nhóm chọn PHIEU_MUON vì (1) đặc tính kết nối tốt hơn: các truy vấn mượn/trả và báo cáo luôn kết nối CT_MUON với PHIEU_MUON và độc giả; (2) phục vụ nhiều ứng dụng hơn (mượn, trả, phạt, báo cáo 1, 2, 4). Do độc giả chỉ mượn sách tại chi nhánh mình, CT_MUON_k ⋈ CUON_SACH_k vẫn hoàn toàn cục bộ.
+- CT_MUON có hai owner có thể chọn (PHIEU_MUON và CUON_SACH). Nhóm chọn PHIEU_MUON vì (1) đặc tính kết nối tốt hơn: các truy vấn mượn/trả và báo cáo luôn kết nối CT_MUON với PHIEU_MUON và độc giả; (2) phục vụ nhiều ứng dụng hơn (mượn, trả, phạt, báo cáo 1, 2, 4). Theo số liệu, độc giả mượn sách tại chi nhánh mình đăng ký (dữ liệu demo: 0 lượt mượn khác chi nhánh), nên CT_MUON_k ⋈ CUON_SACH_k hoàn toàn cục bộ.
+- Nghiệp vụ vẫn **cho phép mượn liên chi nhánh** (CSDL không cấm). Khi đó dòng CT_MUON thuộc mảnh của chi nhánh độc giả (dẫn xuất theo PHIEU_MUON), còn cuốn sách nằm ở mảnh CUON_SACH của site khác: giao tác mượn/trả phải cập nhật hai site (trạng thái cuốn, số lượng trên giá) nên cần giao tác phân tán (cam kết hai pha); truy vấn ghép CT_MUON với CUON_SACH khi đó phải truy cập site xa. Vì tần suất thấp, nhóm chấp nhận chi phí này thay vì nhân bản CUON_SACH.
 
 ## 5.5 Phân mảnh dọc và phân mảnh lai NGUOI (phần độc giả)
 

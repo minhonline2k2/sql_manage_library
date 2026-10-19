@@ -58,7 +58,7 @@ c4 = ["# CHƯƠNG 4. CÀI ĐẶT CƠ SỞ DỮ LIỆU VÀ ỨNG DỤNG\n", """##
 | File | Nội dung |
 | --- | --- |
 | 01_schema.sql | Tạo database QLTV, 23 bảng và toàn bộ ràng buộc PK, FK, UNIQUE, CHECK, DEFAULT |
-| 02_function_procedure.sql | 7 function nghiệp vụ, các procedure thêm/xóa/sửa/tìm kiếm |
+| 02_function_procedure.sql | 8 function nghiệp vụ, các procedure thêm/xóa/sửa/tìm kiếm |
 | 03_trigger.sql | 8 trigger nghiệp vụ (18 trigger con) |
 | 04_transaction.sql | 7 transaction nghiệp vụ dạng procedure |
 | 05_seed.sql | Dữ liệu 3 tháng, sinh bởi gen_seed.py bằng cách gọi chính các transaction |
@@ -149,8 +149,8 @@ ui = [("01_muon_sach", "Màn hình mượn sách"), ("02a_muon_thanh_cong", "L�
       ("02_muon_qua_10_cuon", "Mượn 11 cuốn bị CSDL chặn, hiển thị nguyên văn lỗi E101"),
       ("03_tra_sach", "Màn hình trả sách: danh sách sách đang giữ và nợ phạt của độc giả"), ("03a_tra_co_phat", "Trả sách quá hạn, trigger tự lập phiếu phạt"),
       ("03b_thanh_toan_phat", "Thanh toán toàn bộ phạt (TX3)"),
-      ("04_thue_phong", "Màn hình thuê phòng đọc và tình trạng phòng"), ("04a_them_phong_doc", "Quản lý phòng đọc: thêm phòng mới thành công"),
-      ("05_doc_gia", "Quản lý độc giả: tìm kiếm"), ("05a_dang_ky_doc_gia", "Đăng ký độc giả mới (TX6) thành công"),
+      ("04_thue_phong", "Màn hình thuê phòng đọc: tiền thuê dự kiến cập nhật theo phòng, khung giờ và tình trạng phòng"), ("04a_them_phong_doc", "Quản lý phòng đọc: thêm phòng mới thành công"),
+      ("05_doc_gia", "Quản lý độc giả: danh sách, bấm chọn hàng để sửa, gia hạn, xóa"), ("05a_dang_ky_doc_gia", "Đăng ký độc giả mới (TX6) thành công"),
       ("05b_xoa_doc_gia_bi_chan", "Xóa độc giả còn giữ sách bị trigger chặn (E404)"),
       ("06_sach_kho", "Quản lý sách và kho: tìm kiếm đầu sách"), ("06a_them_phong_kho", "Thêm phòng kho thành công"),
       ("06b_them_gia_sach", "Thêm giá sách thành công"), ("06c_xoa_cuon_bi_chan", "Xóa cuốn sách đã có lịch sử mượn bị chặn (E303)"),
@@ -162,7 +162,7 @@ bang_kq = "| # | Thao tác (nút bấm) | Kỳ vọng | Thông báo của hệ t
     f"| {i} | {r[0]} | {'Thành công' if r[1] == 'success' else 'Bị chặn'} | {r[3].replace('|', '/')} | {'PASS' if r[1] == r[2] else 'FAIL'} |" for i, r in enumerate(kq, 1))
 c4.append("""## 4.13 Giao diện ứng dụng
 
-Ứng dụng có 7 chức năng ở thanh bên trái (mượn sách; trả sách và phạt; phòng đọc; độc giả; sách và kho; thủ thư và chi nhánh; báo cáo); người dùng chọn chi nhánh và thủ thư thao tác. Mỗi đối tượng chính đều có đủ thêm, sửa, xóa, tìm kiếm trên giao diện: độc giả, thủ thư, chi nhánh (đổi thủ thư trưởng), đầu sách, cuốn sách (chuyển giá, xóa, thanh lý), giá sách, phòng kho, phòng đọc. Mỗi nút bấm gọi đúng một stored procedure; khi CSDL từ chối (SIGNAL, CHECK, khóa ngoại), giao diện hiển thị nguyên văn thông báo lỗi, chứng tỏ luật nghiệp vụ nằm hoàn toàn trong CSDL. Kết nối dùng tài khoản `ql_thuvien` (vai trò r_QuanLy), không có quyền ghi trực tiếp vào bảng.
+Ứng dụng có 7 chức năng ở thanh bên trái (mượn sách; trả sách và phạt; phòng đọc; độc giả; sách và kho; thủ thư và chi nhánh; báo cáo); người dùng chọn chi nhánh và thủ thư thao tác. Mỗi đối tượng chính đều có đủ thêm, sửa, xóa, tìm kiếm trên giao diện: độc giả, thủ thư, chi nhánh (đổi thủ thư trưởng), đầu sách, cuốn sách (chuyển giá, xóa, thanh lý), giá sách, phòng kho, phòng đọc. Các bảng dữ liệu bấm chọn được cả hàng: form sửa/xóa lấy theo hàng đang chọn và bảng tự nạp lại, bỏ chọn sau mỗi thao tác; các mã đã có trong CSDL (độc giả, cuốn sách khi mượn/trả, phòng, giá, đầu sách khi nhập lô) được chọn từ danh sách có ô gõ để lọc thay vì gõ tay. Trang phòng đọc hiện tiền thuê dự kiến (procedure `sp_ThuePhong_BaoGia`, dùng chung function `fn_TienThuePhong` với TX7) cùng cảnh báo E202/E203 ngay khi đổi phòng, khung giờ hoặc số người. Mỗi nút bấm gọi đúng một stored procedure; khi CSDL từ chối (SIGNAL, CHECK, khóa ngoại), giao diện hiển thị nguyên văn thông báo lỗi, chứng tỏ luật nghiệp vụ nằm hoàn toàn trong CSDL. Kết nối dùng tài khoản `ql_thuvien` (vai trò r_QuanLy), không có quyền ghi trực tiếp vào bảng.
 
 Giao diện được kiểm thử tự động bằng Playwright (script `app/chup_man_hinh.py`): trình duyệt mở từng màn hình, nhập dữ liệu, bấm nút và đọc thông báo trả về. Kết quả: **{{dat}}/{{len(kq)}} thao tác đúng kỳ vọng**.
 
@@ -183,7 +183,7 @@ Nhóm đã xây dựng hoàn chỉnh hệ CSDL quản lý thư viện theo kịc
 
 - Lược đồ E-R có đủ các loại tập thực thể (mạnh, yếu, ISA), thuộc tính (đơn, kép, đa trị, dẫn xuất, rỗng) và liên kết (1:1, 1:N, N:N, đệ quy, 3 ngôi, xác định, kết hợp, ràng buộc min-max).
 - 23 lược đồ quan hệ ở dạng chuẩn BCNF, có phụ thuộc hàm, khóa, quá trình chuẩn hóa minh họa, sơ đồ khóa chính – khóa ngoại và từ điển dữ liệu.
-- Cài đặt trên MariaDB với 23 khóa chính, 34 khóa ngoại, 11 UNIQUE, 44 CHECK; 8 trigger, 7 transaction, 7 function và các procedure thêm/xóa/sửa/tìm kiếm cho mọi đối tượng.
+- Cài đặt trên MariaDB với 23 khóa chính, 34 khóa ngoại, 11 UNIQUE, 44 CHECK; 8 trigger, 7 transaction, 8 function và các procedure thêm/xóa/sửa/tìm kiếm cho mọi đối tượng.
 - Dữ liệu vận hành 3 tháng ở 3 chi nhánh (300 đầu sách, 1.623 cuốn, 200 độc giả, 831 phiếu mượn, 2.217 lượt mượn); 6 truy vấn hiển thị theo đúng yêu cầu sắp xếp của đề; chỉ mục, phân quyền và 47 ca kiểm thử tự động đều đạt.
 - Giao diện có đủ thêm/xóa/sửa/tìm kiếm cho các đối tượng chính, 23 thao tác được kiểm thử tự động bằng trình duyệt đều cho kết quả đúng kỳ vọng.
 - Thiết kế phân tán cho 3 site: phân mảnh ngang nguyên thủy (COM_MIN, PHORIZONTAL), dẫn xuất, dọc (BEA), lai; cấp phát, nhân bản; minh họa cài đặt và kiểm chứng 3 quy tắc phân mảnh (36/36 đạt).
