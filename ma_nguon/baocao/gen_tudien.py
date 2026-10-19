@@ -78,7 +78,7 @@ NHOM = {"Con người": ["NGUOI", "SDT_NGUOI", "DOC_GIA", "THE_DOC_GIA", "THU_TH
         "Mượn trả": ["PHIEU_MUON", "PHIEU_TRA", "CT_MUON", "PHIEU_PHAT", "CT_MUON_LUU_TRU"], "Phòng đọc": ["LOAI_PHONG", "PHONG_DOC", "PHIEU_THUE_PHONG"]}
 MAU = {"Con người": "#DDEBF7", "Sách và kho": "#E2EFDA", "Mượn trả": "#FCE4D6", "Phòng đọc": "#FFF2CC"}
 d = ['digraph LDQH {', 'graph [rankdir=LR, nodesep=0.35, ranksep=0.9, fontname="Arial", splines=true, concentrate=false];',
-     'node [shape=plaintext, fontname="Arial", fontsize=10]; edge [arrowhead=normal, arrowsize=0.7, color="#555555"];']
+     'node [shape=plaintext, fontname="Arial", fontsize=10]; edge [arrowsize=0.9, color="#555555"];']
 for g, ds in NHOM.items():
     for t in ds:
         fk = fk_cua(t)
@@ -89,12 +89,19 @@ for g, ds in NHOM.items():
             if key == "PRI": txt = f"<U><B>{txt}</B></U>"
             hang.append(f'<TR><TD ALIGN="LEFT" PORT="{col}">{txt}</TD></TR>')
         d.append(f'{t} [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" BGCOLOR="white"><TR><TD BGCOLOR="{MAU[g]}"><B>{t}</B></TD></TR>{"".join(hang)}</TABLE>>];')
+# Cạnh FK → PK dùng ký hiệu chân gà, suy ra từ ràng buộc thật: đầu bảng FK là 0..N (0..1 nếu cột FK là UNIQUE/PK riêng),
+# đầu bảng PK là "một và chỉ một" (0..1 nếu cột FK cho phép NULL)
+DUY_NHAT = {(t, c) for t, c in q("""SELECT TABLE_NAME, MAX(COLUMN_NAME) FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA='QLTV' AND NON_UNIQUE=0 GROUP BY TABLE_NAME, INDEX_NAME HAVING COUNT(*) = 1""")}
+CO_NULL = {(t, c) for t, c in q("SELECT TABLE_NAME, COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='QLTV' AND IS_NULLABLE='YES'")}
 for t in BANG:
     seen = set()
     for col, (rt, rc) in fk_cua(t).items():
         if (rt, col) in seen: continue
         seen.add((rt, col))
-        d.append(f'{t}:{col} -> {rt}:{rc};')
+        duoi = "teeodot" if (t, col) in DUY_NHAT else "crowodot"
+        dau = "teeodot" if (t, col) in CO_NULL else "teetee"
+        d.append(f'{t}:{col} -> {rt}:{rc} [dir=both, arrowtail={duoi}, arrowhead={dau}];')
 d.append("}")
 open("../erd/luoc_do_quan_he.dot", "w", encoding="utf-8").write("\n".join(d))
 subprocess.run("dot -Tpng -Gdpi=130 ../erd/luoc_do_quan_he.dot -o ../erd/luoc_do_quan_he.png", shell=True, check=True)

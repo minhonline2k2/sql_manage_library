@@ -58,7 +58,7 @@ Tại mỗi chi nhánh:
 | Mỗi phiếu trả ≥ 1 cuốn | Đề | Transaction TX2 |
 | Mỗi giá ≤ sức chứa (100) | Nhóm | CHECK + trigger TRG6 |
 | Số người thuê ≤ sức chứa phòng | Nhóm | Transaction TX7 |
-| Mỗi chi nhánh đúng 1 thủ thư trưởng; 1 thủ thư trưởng 1 chi nhánh | Nhóm | NOT NULL + UNIQUE |
+| Mỗi chi nhánh đúng 1 thủ thư trưởng; 1 thủ thư trưởng 1 chi nhánh | Nhóm | UNIQUE + FK; cột tạm cho phép NULL vì khóa ngoại vòng CHI_NHANH ↔ THU_THU (MariaDB không có ràng buộc trì hoãn), được gán ngay sau khi tạo thủ thư; không xóa được thủ thư đang là trưởng (E403) |
 | Mỗi độc giả đúng 1 thẻ | Nhóm | UNIQUE trên khóa ngoại |
 | Mỗi người ≥ 1 số điện thoại | Nhóm | Transaction TX6 |
 
@@ -139,8 +139,8 @@ Tại mỗi chi nhánh:
 | ISA (disjoint, toàn bộ) | NGUOI → DOC_GIA, THU_THU |
 | Kết hợp (aggregation) | tra_lai, bi_phat trên [gom_sach] |
 | Ràng buộc (min,max) | (1,10) cuốn/phiếu; (0,50) cuốn/độc giả |
-| Tham gia toàn bộ / một phần | CHI_NHANH – truong_chi_nhanh (toàn bộ); THU_THU (một phần) |
+| Tham gia toàn bộ / một phần | CHI_NHANH – truong_chi_nhanh (toàn bộ: hai vạch ở đầu THU_THU); THU_THU (một phần: vòng tròn ở đầu CHI_NHANH) |
 
 ### 2.4 Sơ đồ
 
-Sơ đồ ERD ký hiệu Chen được vẽ bằng Graphviz (`btl/erd/erd.dot`), xuất ảnh ở phần P10 để đưa vào báo cáo: chữ nhật = tập thực thể, chữ nhật kép = thực thể yếu, thoi = liên kết, thoi kép = liên kết xác định, ellipse = thuộc tính (gạch chân = khóa, nét đứt = dẫn xuất, viền kép = đa trị), tam giác ISA, hộp nét đứt bao quanh gom_sach = kết hợp.
+Sơ đồ ERD ký hiệu Chen được vẽ bằng Graphviz (`btl/erd/erd.dot`), xuất ảnh ở phần P10 để đưa vào báo cáo: chữ nhật = tập thực thể, chữ nhật kép = thực thể yếu, thoi = liên kết, thoi kép = liên kết xác định, ellipse = thuộc tính (gạch chân = khóa, nét đứt = dẫn xuất, viền kép = đa trị), tam giác ISA, hộp nét đứt bao quanh gom_sach = kết hợp. Ký hiệu đường nối theo chuẩn chân gà (crow's foot), đặt ở đầu sát thực thể và đọc ngang qua liên kết (số thực thể phía đó ứng với một thực thể phía bên kia): vạch + vòng tròn = không hoặc một (0..1); hai vạch = một và chỉ một (1); chân gà + vòng tròn = không hoặc nhiều (0..N); chân gà + vạch = một hoặc nhiều (1..N). Vạch (min = 1) ở đầu bên kia thể hiện thực thể tham gia toàn bộ, vòng tròn (min = 0) là tham gia một phần. Giới hạn cụ thể ghi kèm: tối đa 10 cuốn mỗi phiếu (gom_sach), tối đa 50 cuốn mỗi độc giả (giu_sach). Riêng tổng quát hóa ISA dùng đường đôi = tổng quát hóa đầy đủ.

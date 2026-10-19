@@ -32,7 +32,7 @@ o.append(ha_cap(doan(P1, "### 1.1", "## 2.")))
 c2 = ha_cap(doan(P1, "### 2.1"))
 c2 = re.sub(r"## 2\.4 Sơ đồ\n\n.*", """## 2.4 Sơ đồ E-R
 
-Sơ đồ dùng ký hiệu Chen như bài giảng: chữ nhật = tập thực thể, chữ nhật kép = thực thể yếu, thoi = liên kết, thoi kép = liên kết xác định, ellipse = thuộc tính (gạch chân = khóa, gạch chân mảnh = khóa bán phần, nét đứt = dẫn xuất, viền kép = đa trị), tam giác ISA có chữ d = phân tách (disjoint), đường đôi = tham gia toàn bộ, thoi nét đứt gom_sach = kết hợp (aggregation), thoi màu cam thue_phong = liên kết 3 ngôi giữa DOC_GIA, PHONG_DOC và THU_THU (thủ thư duyệt) mang các thuộc tính của lượt thuê.
+Sơ đồ dùng ký hiệu Chen như bài giảng: chữ nhật = tập thực thể, chữ nhật kép = thực thể yếu, thoi = liên kết, thoi kép = liên kết xác định, ellipse = thuộc tính (gạch chân = khóa, gạch chân mảnh = khóa bán phần, nét đứt = dẫn xuất, viền kép = đa trị), tam giác ISA có chữ d = phân tách (disjoint), thoi nét đứt gom_sach = kết hợp (aggregation), thoi màu cam thue_phong = liên kết 3 ngôi giữa DOC_GIA, PHONG_DOC và THU_THU (thủ thư duyệt) mang các thuộc tính của lượt thuê. Ký hiệu đường nối theo chuẩn chân gà (crow's foot), đặt ở đầu sát thực thể và đọc ngang qua liên kết (số thực thể phía đó ứng với một thực thể phía bên kia): vạch + vòng tròn = không hoặc một (0..1); hai vạch = một và chỉ một (1); chân gà + vòng tròn = không hoặc nhiều (0..N); chân gà + vạch = một hoặc nhiều (1..N). Vạch (min = 1) ở đầu bên kia thể hiện thực thể tham gia toàn bộ, vòng tròn (min = 0) là tham gia một phần. Giới hạn cụ thể ghi kèm: tối đa 10 cuốn mỗi phiếu (gom_sach), tối đa 50 cuốn mỗi độc giả (giu_sach). Riêng tổng quát hóa ISA dùng đường đôi = tổng quát hóa đầy đủ.
 
 ![Hình 2.1. Lược đồ E-R của hệ thống quản lý thư viện](../erd/erd_doc.png)
 """, c2, flags=re.S)
@@ -43,7 +43,7 @@ o.append("# CHƯƠNG 3. LƯỢC ĐỒ QUAN HỆ VÀ CHUẨN HÓA\n")
 o.append(doan(P2, "Ký hiệu:"))
 o.append("""## 3.7 Sơ đồ lược đồ quan hệ
 
-Sơ đồ được sinh tự động từ `information_schema` của CSDL đã cài đặt (script `gen_tudien.py`): mỗi khung là một quan hệ, khóa chính in đậm gạch chân, khóa ngoại in nghiêng, mũi tên đi từ khóa ngoại đến khóa chính được tham chiếu. Màu nền tiêu đề chia 4 nhóm nghiệp vụ: con người (xanh dương), sách và kho (xanh lá), mượn trả (cam), phòng đọc (vàng).
+Sơ đồ được sinh tự động từ `information_schema` của CSDL đã cài đặt (script `gen_tudien.py`): mỗi khung là một quan hệ, khóa chính in đậm gạch chân, khóa ngoại in nghiêng, mỗi cạnh nối cột khóa ngoại với khóa chính được tham chiếu và dùng ký hiệu chân gà suy ra từ ràng buộc thật: đầu bảng chứa khóa ngoại là không hoặc nhiều (không hoặc một nếu cột khóa ngoại là UNIQUE), đầu bảng được tham chiếu là một và chỉ một (không hoặc một nếu khóa ngoại cho phép NULL). Màu nền tiêu đề chia 4 nhóm nghiệp vụ: con người (xanh dương), sách và kho (xanh lá), mượn trả (cam), phòng đọc (vàng).
 
 ![Hình 3.1. Sơ đồ lược đồ quan hệ với các liên kết khóa chính – khóa ngoại](../erd/luoc_do_quan_he.png)
 """)
