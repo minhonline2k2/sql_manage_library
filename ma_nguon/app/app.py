@@ -62,6 +62,27 @@ def chon_hang(df, key, height=None):
     return df.iloc[hang[0]] if hang else None
 
 
+def bang_chon_nhieu(df, key, o_nhap, cot_ma="MaCuonSach", height=None):
+    """Bảng bấm chọn nhiều hàng; hàng vừa bấm chọn thì thêm mã vào ô `o_nhap` (key của st.multiselect),
+    bấm lại để bỏ chọn thì bỏ mã đó. Mã người dùng tự thêm/bớt ở ô nhập được giữ nguyên."""
+    k = f"{key}_{st.session_state.get('lam_moi', 0)}"
+    ma = df[cot_ma].tolist()
+    tt = st.session_state.get(k)
+    hang = tt["selection"]["rows"] if tt else []
+    st.session_state[f"_ma_{k}"] = ma
+    st.session_state[f"_truoc_{k}"] = {ma[i] for i in hang if i < len(ma)}     # lựa chọn trước lần bấm kế tiếp
+
+    def khi_chon():
+        ma_, truoc = st.session_state[f"_ma_{k}"], st.session_state[f"_truoc_{k}"]
+        nay = {ma_[i] for i in st.session_state[k]["selection"]["rows"] if i < len(ma_)}
+        hien = st.session_state.get(o_nhap, [])
+        st.session_state[o_nhap] = ([m for m in hien if m not in truoc - nay]
+                                    + [m for m in ma_ if m in nay - truoc and m not in hien])
+
+    st.dataframe(df, key=k, on_select=khi_chon, selection_mode="multi-row", hide_index=True,
+                 use_container_width=True, **({"height": height} if height else {}))
+
+
 def chon(nhan, df, cot_ma, cot_ten=None, key=None, nhieu=False):
     """Danh sách chọn (gõ để lọc) lấy từ kết quả procedure; hiển thị 'mã – tên'."""
     ten = dict(zip(df[cot_ma], df[cot_ten])) if cot_ten else {}
@@ -103,16 +124,16 @@ if trang == "Mượn sách":
             chay(lambda: goi("sp_MuonSach", dg, ma_thu_thu, json.dumps(cuon), ngay, so_out=1)[1][0], "Đã lập phiếu mượn số", "muon")
         bao("muon")
     with c2:
-        st.caption("Sách đang trên giá tại chi nhánh")
-        st.dataframe(tren_gia, height=420, hide_index=True, use_container_width=True)
+        st.caption("Sách đang trên giá tại chi nhánh – bấm vào hàng để thêm mã vào ô \"Cuốn sách\" (bấm lại để bỏ)")
+        bang_chon_nhieu(tren_gia, "muon_bang", f"muon_cuon_{st.session_state.get('lam_moi', 0)}", height=420)
 
 # ------------------------------------------------------------------ TRẢ
 elif trang == "Trả sách & phạt":
     dg = chon("Độc giả", doc_gia_cn, "MaDocGia", "HoTen", key="tra_dg")
     dang_giu = bang("sp_BC_SachDangMuon", None).query("MaDocGia == @dg") if dg else None
     if dg:
-        st.caption("Sách độc giả đang giữ")
-        st.dataframe(dang_giu, hide_index=True, use_container_width=True)
+        st.caption("Sách độc giả đang giữ – bấm vào hàng để thêm mã vào ô \"Cuốn trả\" (bấm lại để bỏ)")
+        bang_chon_nhieu(dang_giu, f"tra_bang_{dg}", f"tra_cuon_{st.session_state.get('lam_moi', 0)}")
         c1, c2 = st.columns(2)
         with c1:
             ngay = st.date_input("Ngày trả", date.today())
