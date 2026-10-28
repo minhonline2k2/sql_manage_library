@@ -143,11 +143,11 @@ Tại mỗi chi nhánh:
 | ISA (disjoint, toàn bộ) | NGUOI → DOC_GIA, THU_THU |
 | Kết hợp (aggregation) | tra_lai, bi_phat trên [gom_sach] |
 | Ràng buộc (min,max) | (1,10) cuốn/phiếu; (0,50) cuốn/độc giả |
-| Tham gia toàn bộ / một phần | CHI_NHANH – truong_chi_nhanh (toàn bộ: hai vạch ở đầu THU_THU); THU_THU (một phần: vòng tròn ở đầu CHI_NHANH) |
+| Tham gia toàn bộ / một phần | CHI_NHANH – truong_chi_nhanh (toàn bộ, đường đôi); THU_THU (một phần, đường đơn) |
 
 ## 2.4 Sơ đồ E-R
 
-Sơ đồ dùng ký hiệu Chen như bài giảng: chữ nhật = tập thực thể, chữ nhật kép = thực thể yếu, thoi = liên kết, thoi kép = liên kết xác định, ellipse = thuộc tính (gạch chân = khóa, gạch chân mảnh = khóa bán phần, nét đứt = dẫn xuất, viền kép = đa trị), tam giác ISA có chữ d = phân tách (disjoint), thoi nét đứt gom_sach = kết hợp (aggregation), thoi màu cam thue_phong = liên kết 3 ngôi giữa DOC_GIA, PHONG_DOC và THU_THU (thủ thư duyệt) mang các thuộc tính của lượt thuê. Ký hiệu đường nối theo chuẩn chân gà (crow's foot), đặt ở đầu sát thực thể và đọc ngang qua liên kết (số thực thể phía đó ứng với một thực thể phía bên kia): vạch + vòng tròn = không hoặc một (0..1); hai vạch = một và chỉ một (1); chân gà + vòng tròn = không hoặc nhiều (0..N); chân gà + vạch = một hoặc nhiều (1..N). Vạch (min = 1) ở đầu bên kia thể hiện thực thể tham gia toàn bộ, vòng tròn (min = 0) là tham gia một phần. Giới hạn cụ thể ghi kèm: tối đa 10 cuốn mỗi phiếu (gom_sach), tối đa 50 cuốn mỗi độc giả (giu_sach). Riêng tổng quát hóa ISA dùng đường đôi = tổng quát hóa đầy đủ.
+Sơ đồ dùng ký hiệu Chen như bài giảng: chữ nhật = tập thực thể, chữ nhật kép = thực thể yếu, thoi = liên kết, thoi kép = liên kết xác định, ellipse = thuộc tính (gạch chân = khóa, gạch chân mảnh = khóa bán phần, nét đứt = dẫn xuất, viền kép = đa trị), tam giác ISA có chữ d = phân tách (disjoint), thoi nét đứt gom_sach = kết hợp (aggregation), thoi màu cam thue_phong = liên kết 3 ngôi giữa DOC_GIA, PHONG_DOC và THU_THU (thủ thư duyệt) mang các thuộc tính của lượt thuê. Ký hiệu liên kết theo bài giảng: nhãn lực lượng 1 / N / M ghi sát mỗi thực thể (1:1, 1:N, N:1, M:N); chân gà đặt ở đầu thực thể phía "nhiều"; đường đôi giữa thực thể và hình thoi = thực thể tham gia toàn bộ, đường đơn = tham gia một phần; ràng buộc (min,max) ghi kèm khi có giới hạn cụ thể: (1,10) cạnh PHIEU_MUON trên gom_sach (mỗi phiếu mượn 1–10 cuốn) và (0,50) trên nhánh DOC_GIA của giu_sach (mỗi độc giả giữ tối đa 50 cuốn). Liên kết đệ quy quan_ly ghi tên vai trò (quản lý, nhân viên) trên hai nhánh; đường đôi từ NGUOI lên tam giác ISA = tổng quát hóa đầy đủ. Riêng sơ đồ lược đồ quan hệ (mục 3.7) dùng ký hiệu chân gà đầy đủ của chuẩn IE cho cạnh khóa ngoại.
 
 ![Hình 2.1. Lược đồ E-R của hệ thống quản lý thư viện](../erd/erd_doc.png)
 

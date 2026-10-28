@@ -28,21 +28,23 @@ def rel(name, label, ident=False):
     E.append(f'{name} [shape=diamond, style=filled, fillcolor="#FFE699", label="{label}"'
              + (", peripheries=2" if ident else "") + "];")
 
-# Ký hiệu chân gà (min..max) đặt ở đầu đường nối sát thực thể, đọc ngang qua liên kết:
-# số thực thể phía này ứng với MỘT thực thể phía bên kia. Graphviz: hình đầu tiên nằm sát node.
-CHAN_GA = {"0..1": "teeodot", "1": "teetee", "0..N": "crowodot", "1..N": "crowtee"}
+# Ký hiệu liên kết theo bài giảng (Chen): nhãn lực lượng 1 / N / M ghi sát thực thể; chân gà ở đầu thực thể
+# phía "nhiều"; đường đôi = thực thể tham gia toàn bộ; (min,max) ghi kèm khi có giới hạn cụ thể.
+def link(a, b, total=False):
+    """Nối a -- b không ký hiệu (ISA); total = đường đôi."""
+    L.append(f"{a} -- {b}" + (' [color="black:white:black"]' if total else "") + ";")
 
-def link(a, b, card="", total=False, dau=None, cuoi=None, nhan_dau="", nhan_cuoi=""):
-    """Nối a -- b; dau/cuoi = ký hiệu chân gà ở đầu a / đầu b; total = đường đôi (tham gia toàn bộ)."""
-    opt = [f'label="{card}"'] if card else []
-    if dau or cuoi:
-        opt.append("dir=" + ("both" if dau and cuoi else "back" if dau else "forward"))
-        if dau: opt.append(f"arrowtail={CHAN_GA[dau]}")
-        if cuoi: opt.append(f"arrowhead={CHAN_GA[cuoi]}")
-    if nhan_dau: opt.append(f'taillabel="{nhan_dau}"')
-    if nhan_cuoi: opt.append(f'headlabel="{nhan_cuoi}"')
-    if total: opt.append('color="black:white:black"')
-    L.append(f"{a} -- {b}" + (f" [{', '.join(opt)}]" if opt else "") + ";")
+def noi(rid, e, the, toan_bo=False, kem="", cong=None, giua=""):
+    """Nối hình thoi rid với thực thể e: nhãn lực lượng `the` (1/N/M, kèm `kem` = (min,max) hoặc vai trò) sát e,
+    chân gà sát e nếu e ở phía nhiều, đường đôi nếu e tham gia toàn bộ; cong = góc của e để gắn (vd "sw");
+    giua = nhãn đặt giữa đường (vai trò, (min,max)) cho chỗ đông."""
+    cong = cong or GOC.get((rid, e))
+    opt = [f'headlabel="{the}' + (f"\\n{kem}" if kem else "") + '"']
+    if the in ("N", "M"): opt += ["dir=forward", "arrowhead=crow"]    # đầu mũi tên luôn ở phía thực thể
+    if toan_bo: opt.append('color="black:white:black"')
+    if cong: opt.append(f"headport={cong}")
+    if giua: opt.append(f'label="{giua}"')
+    L.append(f"{rid} -- {e} [{', '.join(opt)}];")
 
 # ---- entities + attributes
 ent("CHI_NHANH"); attr("CHI_NHANH", "MaChiNhanh", key=True)
@@ -79,48 +81,50 @@ ent("PHONG_DOC"); attr("PHONG_DOC", "MaPhongDoc", key=True); attr("PHONG_DOC", "
 E.append('ISA [shape=invtriangle, style=filled, fillcolor="#FFFF00", label="ISA\\nd"];')
 link("NGUOI", "ISA", total=True); link("ISA", "DOC_GIA"); link("ISA", "THU_THU")
 
-# ---- liên kết hai ngôi: (thực thể, ký hiệu ở đầu thực thể đó, nhãn vai trò)
-# Tham gia toàn bộ của A thể hiện bằng min = 1 ở ký hiệu đầu bên kia (vạch thay vì vòng tròn), không vẽ đường đôi.
+# ---- liên kết hai ngôi: (thực thể, lực lượng 1/N/M ghi sát thực thể đó, thực thể đó tham gia toàn bộ?)
 R = [
- ("r_truong", "truong_chi_nhanh", False, ("THU_THU", "1"), ("CHI_NHANH", "0..1")),
- ("r_lamviec", "lam_viec_tai", False, ("THU_THU", "1..N"), ("CHI_NHANH", "1")),
- ("r_quanly", "quan_ly", False, ("THU_THU", "0..1"), ("THU_THU", "0..N")),   # vai trò ghi ở giữa hai nhánh, xem dưới
- ("r_dangky", "dang_ky_tai", False, ("DOC_GIA", "0..N"), ("CHI_NHANH", "1")),
- ("r_the", "so_huu_the", False, ("DOC_GIA", "1"), ("THE_DOC_GIA", "1")),
- ("r_theloai", "thuoc_the_loai", False, ("DAU_SACH", "0..N"), ("THE_LOAI", "1")),
- ("r_phi", "ap_dung_phi", True, ("THE_LOAI", "1"), ("BANG_PHI_PHAT", "1..N")),
- ("r_viet", "viet", False, ("DAU_SACH", "1..N"), ("TAC_GIA", "0..N")),
- ("r_gomcuon", "gom_cuon", True, ("DAU_SACH", "1"), ("CUON_SACH", "0..N")),
- ("r_dattai", "dat_tai", False, ("CUON_SACH", "0..N"), ("GIA_SACH", "1")),
- ("r_chuatl", "chua_the_loai", False, ("GIA_SACH", "0..N"), ("THE_LOAI", "1")),
- ("r_namtrong", "nam_trong", False, ("GIA_SACH", "0..N"), ("PHONG_KHO", "1")),
- ("r_khocn", "thuoc_chi_nhanh", False, ("PHONG_KHO", "0..N"), ("CHI_NHANH", "1")),
- ("r_lapmuon", "lap_phieu_muon", False, ("THU_THU", "1"), ("PHIEU_MUON", "0..N")),
- ("r_muonboi", "muon_boi", False, ("DOC_GIA", "1"), ("PHIEU_MUON", "0..N")),
- ("r_lap_tra", "lap_phieu_tra", False, ("THU_THU", "1"), ("PHIEU_TRA", "0..N")),
- ("r_traboi", "tra_boi", False, ("DOC_GIA", "1"), ("PHIEU_TRA", "0..N")),
- ("r_loaiphong", "thuoc_loai", False, ("PHONG_DOC", "0..N"), ("LOAI_PHONG", "1")),
- ("r_phongcn", "phong_cua", False, ("PHONG_DOC", "0..N"), ("CHI_NHANH", "1")),
- ("r_tl", "thanh_ly_tu", False, ("SACH_THANH_LY", "0..N"), ("DAU_SACH", "1")),
+ ("r_truong", "truong_chi_nhanh", False, ("THU_THU", "1", False), ("CHI_NHANH", "1", True)),
+ ("r_lamviec", "lam_viec_tai", False, ("THU_THU", "N", True), ("CHI_NHANH", "1", True)),
+ ("r_quanly", "quan_ly", False, ("THU_THU", "1", False), ("THU_THU", "N", False)),   # đệ quy, xem KEM
+ ("r_dangky", "dang_ky_tai", False, ("DOC_GIA", "N", True), ("CHI_NHANH", "1", False)),
+ ("r_the", "so_huu_the", False, ("DOC_GIA", "1", True), ("THE_DOC_GIA", "1", True)),
+ ("r_theloai", "thuoc_the_loai", False, ("DAU_SACH", "N", True), ("THE_LOAI", "1", False)),
+ ("r_phi", "ap_dung_phi", True, ("THE_LOAI", "1", True), ("BANG_PHI_PHAT", "N", True)),
+ ("r_viet", "viet", False, ("DAU_SACH", "M", False), ("TAC_GIA", "N", True)),
+ ("r_gomcuon", "gom_cuon", True, ("DAU_SACH", "1", False), ("CUON_SACH", "N", True)),
+ ("r_dattai", "dat_tai", False, ("CUON_SACH", "N", True), ("GIA_SACH", "1", False)),
+ ("r_chuatl", "chua_the_loai", False, ("GIA_SACH", "N", True), ("THE_LOAI", "1", False)),
+ ("r_namtrong", "nam_trong", False, ("GIA_SACH", "N", True), ("PHONG_KHO", "1", False)),
+ ("r_khocn", "thuoc_chi_nhanh", False, ("PHONG_KHO", "N", True), ("CHI_NHANH", "1", False)),
+ ("r_lapmuon", "lap_phieu_muon", False, ("THU_THU", "1", False), ("PHIEU_MUON", "N", True)),
+ ("r_muonboi", "muon_boi", False, ("DOC_GIA", "1", False), ("PHIEU_MUON", "N", True)),
+ ("r_lap_tra", "lap_phieu_tra", False, ("THU_THU", "1", False), ("PHIEU_TRA", "N", True)),
+ ("r_traboi", "tra_boi", False, ("DOC_GIA", "1", False), ("PHIEU_TRA", "N", True)),
+ ("r_loaiphong", "thuoc_loai", False, ("PHONG_DOC", "N", True), ("LOAI_PHONG", "1", False)),
+ ("r_phongcn", "phong_cua", False, ("PHONG_DOC", "N", True), ("CHI_NHANH", "1", False)),
+ ("r_tl", "thanh_ly_tu", False, ("SACH_THANH_LY", "N", True), ("DAU_SACH", "1", False)),
 ]
-VAI_TRO = {"r_quanly": ("quản lý", "nhân viên")}   # liên kết đệ quy: tên vai trò trên từng nhánh
-for rid, lab, ident, (a, ka), (b, kb) in R:
+# Góc gắn cố định cho các chỗ nhiều đường cùng đi vào một điểm (Graphviz: n, ne, e, se, s, sw, w, nw)
+GOC = {("r_dangky", "DOC_GIA"): "nw"}
+# Liên kết đệ quy quan_ly: vai trò ghi cạnh nhãn 1/N; nhánh "nhân viên" vào cạnh trái, nhánh "quản lý" vào góc dưới trái
+# của THU_THU (góc dưới phải bị so_huu_the chắn)
+KEM = {"r_quanly": (("quản lý", "sw"), ("nhân viên", "w"))}
+for rid, lab, ident, (a, ca, ta), (b, cb, tb) in R:
     rel(rid, lab, ident)
-    va, vb = VAI_TRO.get(rid, ("", ""))
-    link(a, rid, va, dau=ka)
-    link(rid, b, vb, cuoi=kb)
+    (ka, pa), (kb, pb) = KEM.get(rid, (("", None), ("", None)))
+    noi(rid, a, ca, ta, kem=ka, cong=pa); noi(rid, b, cb, tb, kem=kb, cong=pb)
 
-# ---- kết hợp gom_sach (PHIEU_MUON – CUON_SACH, thuộc tính HanTra): mỗi phiếu 1..10 cuốn
+# ---- kết hợp gom_sach (PHIEU_MUON – CUON_SACH, M:N, thuộc tính HanTra); (1,10): mỗi phiếu tham gia 1..10 lần
 E.append('r_gomsach [shape=diamond, style="filled,dashed", fillcolor="#FFE699", penwidth=2, label="gom_sach\\n[kết hợp]"];')
-link("PHIEU_MUON", "r_gomsach", dau="0..N"); link("r_gomsach", "CUON_SACH", cuoi="1..N", nhan_cuoi="tối đa 10")
+noi("r_gomsach", "PHIEU_MUON", "M", True, kem="(1,10)"); noi("r_gomsach", "CUON_SACH", "N")
 attr("r_gomsach", "HanTra")
-rel("r_tralai", "tra_lai"); link("PHIEU_TRA", "r_tralai", dau="0..1"); link("r_tralai", "r_gomsach", cuoi="1..N")
-rel("r_biphat", "bi_phat"); link("PHIEU_PHAT", "r_biphat", dau="0..1"); link("r_biphat", "r_gomsach", cuoi="1")
-rel("r_giu", "giu_sach\\n(suy ra, ≤ 50)"); link("DOC_GIA", "r_giu", dau="0..1"); link("r_giu", "CUON_SACH", cuoi="0..N")
+rel("r_tralai", "tra_lai"); noi("r_tralai", "PHIEU_TRA", "1", True); noi("r_tralai", "r_gomsach", "N")
+rel("r_biphat", "bi_phat"); noi("r_biphat", "PHIEU_PHAT", "1", True); noi("r_biphat", "r_gomsach", "1")
+rel("r_giu", "giu_sach\\n(suy ra)"); noi("r_giu", "DOC_GIA", "1", giua="(0,50)"); noi("r_giu", "CUON_SACH", "N")
 
-# ---- liên kết 3 ngôi thue_phong (DOC_GIA – PHONG_DOC – THU_THU duyệt), thuộc tính đặt trên liên kết
+# ---- liên kết 3 ngôi thue_phong M:N:1 (DOC_GIA – PHONG_DOC – THU_THU duyệt), thuộc tính đặt trên liên kết
 E.append('r_thue [shape=diamond, style=filled, fillcolor="#F4B183", penwidth=2, label="thue_phong\\n(3 ngôi)"];')
-link("DOC_GIA", "r_thue", dau="0..N"); link("PHONG_DOC", "r_thue", dau="0..N"); link("THU_THU", "r_thue", dau="1", nhan_dau="duyệt")
+noi("r_thue", "DOC_GIA", "M"); noi("r_thue", "PHONG_DOC", "N"); noi("r_thue", "THU_THU", "1", kem="duyệt")
 for x in ["NgayDat", "BatDau", "KetThuc", "SoNguoi", "MucDich", "TrangThai"]: attr("r_thue", x)
 attr("r_thue", "TongTien", derived=True)
 
