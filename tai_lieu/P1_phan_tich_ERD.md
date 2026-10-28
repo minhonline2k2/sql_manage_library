@@ -139,7 +139,7 @@ Tại mỗi chi nhánh:
 | ISA (disjoint, toàn bộ) | NGUOI → DOC_GIA, THU_THU |
 | Kết hợp (aggregation) | tra_lai, bi_phat trên [gom_sach] |
 | Ràng buộc (min,max) | (1,10) cuốn/phiếu; (0,50) cuốn/độc giả |
-| Tham gia toàn bộ / một phần | CHI_NHANH – truong_chi_nhanh (toàn bộ, đường đôi); THU_THU (một phần, đường đơn) |
+| Tham gia toàn bộ / một phần | CHI_NHANH – truong_chi_nhanh (toàn bộ: hai vạch ở đầu THU_THU); THU_THU (một phần: vòng tròn ở đầu CHI_NHANH) |
 
 ### 2.4 Sơ đồ
 

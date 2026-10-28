@@ -40,8 +40,9 @@ Lược đồ E-R ở Hình 2.1 được vẽ theo ký hiệu Chen trong bài gi
 - Thuộc tính là hình ellipse: thuộc tính khóa được gạch chân, khóa bán phần của thực thể yếu có viền xám, thuộc tính dẫn xuất vẽ nét đứt, thuộc tính đa trị có viền kép.
 - Tam giác ISA có chữ d thể hiện cụ thể hóa phân tách (disjoint); đường đôi từ NGUOI lên tam giác nghĩa là mọi người đều phải là độc giả hoặc thủ thư.
 - Hình thoi nét đứt gom_sach là kết hợp (aggregation). Hình thoi màu cam thue_phong là liên kết 3 ngôi giữa DOC_GIA, PHONG_DOC và THU_THU (thủ thư duyệt), mang các thuộc tính của một lượt thuê.
-- Trên mỗi đường nối, nhãn 1, N hoặc M ghi sát thực thể cho biết lực lượng liên kết; đầu thực thể ở phía "nhiều" có thêm ký hiệu chân chim. Đường đôi giữa thực thể và hình thoi nghĩa là thực thể đó tham gia toàn bộ, đường đơn là tham gia một phần.
-- Hai giới hạn cụ thể của đề được ghi bằng cặp (min,max): (1,10) cạnh PHIEU_MUON trên gom_sach, tức mỗi phiếu mượn có từ 1 đến 10 cuốn; (0,50) trên nhánh DOC_GIA của giu_sach, tức mỗi độc giả giữ nhiều nhất 50 cuốn.
+- Đầu mỗi đường nối, sát thực thể, có ký hiệu chân chim cho biết số thực thể phía đó ứng với một thực thể ở phía bên kia liên kết: vạch và vòng tròn là không hoặc một (0..1); hai vạch là một và chỉ một (1); chân chim và vòng tròn là không hoặc nhiều (0..N); chân chim và vạch là một hoặc nhiều (1..N).
+- Vạch (min = 1) ở đầu bên kia nghĩa là thực thể tham gia toàn bộ, vòng tròn (min = 0) là tham gia một phần. Ví dụ ở truong_chi_nhanh, đầu THU_THU có hai vạch vì chi nhánh nào cũng phải có trưởng chi nhánh, còn đầu CHI_NHANH có vòng tròn vì không phải thủ thư nào cũng là trưởng.
+- Hai giới hạn cụ thể của đề được ghi ngay trên sơ đồ: "tối đa 10" ở gom_sach (mỗi phiếu mượn nhiều nhất 10 cuốn) và "≤ 50" ở giu_sach (mỗi độc giả giữ nhiều nhất 50 cuốn).
 - Liên kết đệ quy quan_ly ghi tên vai trò "quản lý" và "nhân viên" trên hai nhánh.
 
 ![Hình 2.1. Lược đồ E-R của hệ thống quản lý thư viện](../erd/erd_doc.png)
