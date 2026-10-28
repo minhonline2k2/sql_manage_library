@@ -1,22 +1,24 @@
 # LỜI MỞ ĐẦU
 
-Báo cáo trình bày toàn bộ quá trình xây dựng hệ cơ sở dữ liệu quản lý thư viện theo kịch bản được giao: phân tích yêu cầu, thiết kế mức khái niệm (lược đồ E-R), thiết kế mức logic và chuẩn hóa về dạng BCNF, cài đặt trên hệ quản trị MariaDB với đầy đủ ràng buộc, 8 trigger và 7 transaction nghiệp vụ, dữ liệu vận hành 3 tháng, các truy vấn báo cáo theo yêu cầu, giao diện kết nối CSDL, và cuối cùng là phân tích, thiết kế cơ sở dữ liệu phân tán cho 3 chi nhánh.
+Trong học phần Các hệ thống cơ sở dữ liệu, nhóm chúng em được giao đề tài "Xây dựng hệ thống quản lý thư viện". Đây là bài toán quen thuộc nhưng có khá nhiều ràng buộc cần xử lý cẩn thận: mỗi giá chỉ chứa sách của một thể loại, mỗi lần mượn không quá 10 cuốn, mỗi độc giả không giữ quá 50 cuốn, tiền phạt và tuổi thọ của sách phụ thuộc vào thể loại, phòng đọc không được cho thuê trùng giờ. Vì vậy nhóm quyết định đặt toàn bộ các luật này ngay trong cơ sở dữ liệu (ràng buộc, trigger, thủ tục lưu trữ) thay vì để giao diện tự kiểm tra. Nhờ đó, dù thao tác qua giao diện hay gõ lệnh SQL trực tiếp, dữ liệu vẫn luôn hợp lệ.
 
-Nguyên tắc xuyên suốt: **mọi luật nghiệp vụ nằm trong CSDL** (ràng buộc, trigger, stored procedure); giao diện chỉ gọi procedure và hiển thị kết quả, nên mọi ràng buộc vẫn được đảm bảo khi thao tác trực tiếp bằng SQL. Toàn bộ mã nguồn được chạy và kiểm thử tự động: 47/47 ca kiểm thử nghiệp vụ, 36/36 ca kiểm tra phân mảnh và 23/23 thao tác trên giao diện đều đạt.
+Báo cáo gồm năm chương. Chương 1 phân tích các yêu cầu của đề. Chương 2 trình bày lược đồ thực thể – liên kết. Chương 3 chuyển lược đồ E-R sang lược đồ quan hệ và chuẩn hóa về dạng BCNF. Chương 4 trình bày quá trình cài đặt trên MariaDB, dữ liệu ba tháng vận hành, các truy vấn theo yêu cầu, kết quả kiểm thử và giao diện ứng dụng. Chương 5 phân tích và thiết kế cơ sở dữ liệu phân tán cho ba chi nhánh. Mã nguồn SQL chính được đưa vào phần phụ lục.
+
+Nhóm chúng em xin chân thành cảm ơn cô Phan Thị Hà đã tận tình giảng dạy và hướng dẫn trong suốt học phần. Do thời gian và hiểu biết còn hạn chế, báo cáo khó tránh khỏi thiếu sót; nhóm rất mong nhận được góp ý của cô để bài làm được hoàn thiện hơn.
 
 # CHƯƠNG 1. PHÂN TÍCH YÊU CẦU
 
 ## 1.1 Mô tả nghiệp vụ
 
-Thư viện có 3 chi nhánh (CN01 Cầu Giấy, CN02 Hà Đông, CN03 Hoàn Kiếm), mở cửa 07:00–21:00. Mỗi chi nhánh có các phòng đựng sách (phòng kho), trong đó đặt các giá sách; mỗi giá chỉ chứa sách của **một thể loại**, tối đa 100 cuốn. Sách được quản lý theo **đầu sách** (một tựa sách); mỗi đầu sách có nhiều **cuốn sách** vật lý. Mã đầu sách có dạng `TR0012`, trong đó 2 ký tự đầu là mã thể loại; mã cuốn có dạng `TR0012-003` (đầu sách + số thứ tự), nên mã cuốn luôn chứa thông tin đầu sách và thể loại như đề yêu cầu.
+Thư viện có 3 chi nhánh (CN01 Cầu Giấy, CN02 Hà Đông, CN03 Hoàn Kiếm), mở cửa 07:00–21:00. Mỗi chi nhánh có các phòng đựng sách (phòng kho), trong đó đặt các giá sách; mỗi giá chỉ chứa sách của một thể loại, tối đa 100 cuốn. Sách được quản lý theo đầu sách (một tựa sách); mỗi đầu sách có nhiều cuốn sách vật lý. Mã đầu sách có dạng `TR0012`, trong đó 2 ký tự đầu là mã thể loại; mã cuốn có dạng `TR0012-003` (đầu sách + số thứ tự), nên mã cuốn luôn chứa thông tin đầu sách và thể loại như đề yêu cầu.
 
 Thủ thư làm việc tại một chi nhánh, có thể có thủ thư quản lý trực tiếp; mỗi chi nhánh có đúng một thủ thư trưởng. Độc giả đăng ký tại một chi nhánh và được cấp thẻ có hiệu lực 1 năm (gia hạn mỗi lần 1 năm).
 
-**Mượn sách:** thủ thư lập phiếu mượn cho độc giả; mỗi phiếu tối đa **10 cuốn**; tại mọi thời điểm một độc giả giữ tối đa **50 cuốn** chưa trả. Mỗi cuốn trong phiếu có hạn trả riêng = ngày mượn + số ngày mượn của thể loại, hoặc số ngày riêng của đầu sách nếu có (sách quý, ít bản). Thẻ hết hạn thì không được mượn. Khi mượn, số lượng sách trên giá giảm và tuổi thọ cuốn sách giảm 1 tháng.
+**Mượn sách:** thủ thư lập phiếu mượn cho độc giả; mỗi phiếu tối đa 10 cuốn; tại mọi thời điểm một độc giả giữ tối đa 50 cuốn chưa trả. Mỗi cuốn trong phiếu có hạn trả riêng = ngày mượn + số ngày mượn của thể loại, hoặc số ngày riêng của đầu sách nếu có (sách quý, ít bản). Thẻ hết hạn thì không được mượn. Khi mượn, số lượng sách trên giá giảm và tuổi thọ cuốn sách giảm 1 tháng.
 
 **Trả sách:** mỗi lần trả, độc giả trả 1 đến nhiều cuốn (có thể thuộc nhiều phiếu mượn khác nhau); số lượng trên giá tăng lại. Trả muộn bị phạt theo thể loại: tiền phạt = phạt cơ bản/cuốn + phạt mỗi ngày × số ngày trễ (Truyện 100.000đ + 10.000đ/ngày; Tham khảo 200.000đ + 30.000đ/ngày; các thể loại khác do nhóm quy định). Bảng phí phạt có ngày áp dụng để thư viện thay đổi chính sách mà không làm sai các phiếu phạt cũ.
 
-**Tuổi thọ sách:** mỗi thể loại có tuổi thọ (Truyện 15 năm, Tham khảo 10 năm, …), lưu theo tháng; mỗi lần mượn giảm 1 tháng. Cuốn về 0 chuyển trạng thái chờ thanh lý; khi thanh lý được chuyển sang bảng **SACH_THANH_LY** và xóa khỏi kho đang quản lý.
+**Tuổi thọ sách:** mỗi thể loại có tuổi thọ riêng (truyện 15 năm, tham khảo 10 năm, …), lưu theo tháng. Tuổi thọ giảm dần theo thời gian kể từ ngày nhập sách, và mỗi lần được mượn giảm thêm 1 tháng. Cuốn nào còn 0 tháng thì chuyển sang trạng thái chờ thanh lý; khi thanh lý, cuốn đó được chuyển sang bảng SACH_THANH_LY và xóa khỏi kho đang quản lý.
 
 **Phòng đọc:** độc giả thuê phòng học nhóm (4–10 người, 50.000đ/giờ, 1–4 giờ) hoặc phòng hội thảo (20–60 người, 300.000đ/giờ, 2–8 giờ); thuê theo giờ tròn trong giờ mở cửa, đặt trước tối đa 14 ngày, không trùng giờ, số người không vượt sức chứa; thủ thư duyệt phiếu thuê. Độc giả còn nợ phạt hoặc thẻ hết hạn không được thuê.
 
@@ -78,10 +80,10 @@ Tại mỗi chi nhánh:
 | THU_THU | Lớp con ISA | (kế thừa MaNguoi) | NgayVaoLam |
 | THE_DOC_GIA | Mạnh | SoThe | NgayCap, NgayHetHan, ConHan *(dẫn xuất)* |
 | THE_LOAI | Mạnh | MaTheLoai | TenTheLoai, SoNgayMuon, TuoiThoNam |
-| BANG_PHI_PHAT | **Yếu** (chủ: THE_LOAI) | khóa bán phần NgayApDung | PhatCoBan, PhatMoiNgay |
+| BANG_PHI_PHAT | Yếu (chủ: THE_LOAI) | khóa bán phần NgayApDung | PhatCoBan, PhatMoiNgay |
 | TAC_GIA | Mạnh | MaTacGia | TenTacGia, QuocTich |
 | DAU_SACH | Mạnh | MaDauSach | TenSach, NhaXuatBan, NamXuatBan, SoNgayMuonRieng *(rỗng được)*, SoLuotMuon *(dẫn xuất)* |
-| CUON_SACH | **Yếu** (chủ: DAU_SACH) | khóa bán phần STT | NgayNhap, TuoiThoConLaiThang, TrangThai |
+| CUON_SACH | Yếu (chủ: DAU_SACH) | khóa bán phần STT | NgayNhap, TuoiThoConLaiThang, TrangThai |
 | PHONG_KHO | Mạnh | MaPhongKho | TenPhong, Tang |
 | GIA_SACH | Mạnh | MaGia | SucChua, SoLuongHienCo *(dẫn xuất, lưu để tăng/giảm như đề)* |
 | SACH_THANH_LY | Mạnh (danh mục lưu trữ) | MaCuonSach | NgayNhap, NgayThanhLy, LyDo |
@@ -96,33 +98,33 @@ Tại mỗi chi nhánh:
 
 | Liên kết | Tập tham gia | Lực lượng | Tham gia | Thuộc tính / ghi chú |
 | --- | --- | --- | --- | --- |
-| ISA | NGUOI → DOC_GIA, THU_THU | — | Toàn bộ, **disjoint** (phân biệt bằng LoaiNguoi = 'DG'/'TT') | Cụ thể hóa |
-| truong_chi_nhanh | THU_THU – CHI_NHANH | **1:1** | CHI_NHANH toàn bộ, THU_THU một phần | Thủ thư trưởng |
-| lam_viec_tai | THU_THU – CHI_NHANH | N:1 | Toàn bộ phía THU_THU | |
-| quan_ly | THU_THU – THU_THU | 1:N **đệ quy** | Một phần | Vai trò: người quản lý / nhân viên |
+| ISA | NGUOI → DOC_GIA, THU_THU | — | Toàn bộ, disjoint (phân biệt bằng LoaiNguoi = 'DG'/'TT') | Cụ thể hóa |
+| truong_chi_nhanh | THU_THU – CHI_NHANH | 1:1 | CHI_NHANH toàn bộ, THU_THU một phần | Thủ thư trưởng |
+| lam_viec_tai | THU_THU – CHI_NHANH | N:1 | Toàn bộ hai phía | Chi nhánh nào cũng có ít nhất một thủ thư (người trưởng) |
+| quan_ly | THU_THU – THU_THU | 1:N đệ quy | Một phần | Vai trò: người quản lý / nhân viên |
 | dang_ky_tai | DOC_GIA – CHI_NHANH | N:1 | Toàn bộ phía DOC_GIA | |
 | so_huu_the | DOC_GIA – THE_DOC_GIA | 1:1 | Toàn bộ hai phía | |
 | thuoc_the_loai | DAU_SACH – THE_LOAI | N:1 | Toàn bộ phía DAU_SACH | |
-| ap_dung_phi | THE_LOAI – BANG_PHI_PHAT | 1:N | **Liên kết xác định** (thực thể yếu) | |
-| viet | DAU_SACH – TAC_GIA | **N:N** | | Từ thuộc tính đa trị "tác giả" |
-| gom_cuon | DAU_SACH – CUON_SACH | 1:N | **Liên kết xác định** | |
+| ap_dung_phi | THE_LOAI – BANG_PHI_PHAT | 1:N | Toàn bộ hai phía | Liên kết xác định của thực thể yếu; thể loại nào cũng có biểu phí |
+| viet | DAU_SACH – TAC_GIA | M:N | Toàn bộ phía TAC_GIA | Từ thuộc tính đa trị "tác giả" |
+| gom_cuon | DAU_SACH – CUON_SACH | 1:N | Toàn bộ phía CUON_SACH | Liên kết xác định của thực thể yếu |
 | dat_tai | CUON_SACH – GIA_SACH | N:1 | Toàn bộ phía CUON_SACH | |
 | chua_the_loai | GIA_SACH – THE_LOAI | N:1 | Toàn bộ phía GIA_SACH | Giá chỉ chứa 1 thể loại |
 | nam_trong | GIA_SACH – PHONG_KHO | N:1 | Toàn bộ | |
 | thuoc_chi_nhanh | PHONG_KHO – CHI_NHANH | N:1 | Toàn bộ | |
-| **muon** | THU_THU – DOC_GIA – CUON_SACH | **3 ngôi** | | Ở mức khái niệm: một lần mượn liên quan đồng thời thủ thư, độc giả, cuốn sách; được hiện thực hóa bằng thực thể PHIEU_MUON + liên kết gom_sach |
-| lap_phieu_muon | THU_THU – PHIEU_MUON | 1:N | | |
-| muon_boi | DOC_GIA – PHIEU_MUON | 1:N | | |
-| gom_sach | PHIEU_MUON – CUON_SACH | **N:N** | Ràng buộc **(1,10)** phía PHIEU_MUON | Thuộc tính HanTra |
-| tra_lai | PHIEU_TRA – [gom_sach] | 1:N | **Kết hợp (aggregation)**: phiếu trả liên kết với cặp (phiếu mượn, cuốn sách) | Mỗi dòng mượn được trả đúng một lần |
-| bi_phat | PHIEU_PHAT – [gom_sach] | 1:1 | **Kết hợp** | Chỉ dòng trả muộn |
-| lap_phieu_tra | THU_THU – PHIEU_TRA | 1:N | | |
-| tra_boi | DOC_GIA – PHIEU_TRA | 1:N | | |
-| giu_sach | DOC_GIA – CUON_SACH | ràng buộc **(0,50)** | | Số cuốn chưa trả tại một thời điểm (suy ra từ gom_sach) |
+| muon | THU_THU – DOC_GIA – CUON_SACH | 3 ngôi | | Ở mức khái niệm: một lần mượn liên quan đồng thời thủ thư, độc giả, cuốn sách; được hiện thực hóa bằng thực thể PHIEU_MUON + liên kết gom_sach |
+| lap_phieu_muon | THU_THU – PHIEU_MUON | 1:N | Toàn bộ phía PHIEU_MUON | |
+| muon_boi | DOC_GIA – PHIEU_MUON | 1:N | Toàn bộ phía PHIEU_MUON | |
+| gom_sach | PHIEU_MUON – CUON_SACH | M:N | Toàn bộ phía PHIEU_MUON, ràng buộc (1,10) | Thuộc tính HanTra |
+| tra_lai | PHIEU_TRA – [gom_sach] | 1:N | Toàn bộ phía PHIEU_TRA | Kết hợp (aggregation): phiếu trả gắn với cặp (phiếu mượn, cuốn sách); mỗi lần mượn được trả nhiều nhất một lần |
+| bi_phat | PHIEU_PHAT – [gom_sach] | 1:1 | Toàn bộ phía PHIEU_PHAT | Kết hợp; chỉ lần mượn trả muộn mới có phiếu phạt |
+| lap_phieu_tra | THU_THU – PHIEU_TRA | 1:N | Toàn bộ phía PHIEU_TRA | |
+| tra_boi | DOC_GIA – PHIEU_TRA | 1:N | Toàn bộ phía PHIEU_TRA | |
+| giu_sach | DOC_GIA – CUON_SACH | 1:N, ràng buộc (0,50) | Một phần | Số cuốn chưa trả tại một thời điểm, suy ra từ gom_sach |
 | thuoc_loai | PHONG_DOC – LOAI_PHONG | N:1 | Toàn bộ | |
 | phong_cua | PHONG_DOC – CHI_NHANH | N:1 | Toàn bộ | |
-| **thue_phong** | DOC_GIA – PHONG_DOC – THU_THU | **3 ngôi** M:N:1 | | Vẽ trực tiếp trên ERD: mỗi lần thuê gắn một độc giả, một phòng và **một** thủ thư duyệt; thuộc tính của liên kết: NgayDat, BatDau, KetThuc, SoNguoi, MucDich, TrangThai, TongTien (dẫn xuất). Một độc giả có thể thuê cùng một phòng nhiều lần ở các khung giờ khác nhau |
-| thanh_ly_tu | SACH_THANH_LY – DAU_SACH | N:1 | | Giữ được thông tin đầu sách sau khi thanh lý |
+| thue_phong | DOC_GIA – PHONG_DOC – THU_THU | 3 ngôi M:N:1 | | Mỗi lần thuê gắn một độc giả, một phòng và một thủ thư duyệt; thuộc tính của liên kết: NgayDat, BatDau, KetThuc, SoNguoi, MucDich, TrangThai, TongTien (dẫn xuất). Một độc giả có thể thuê cùng một phòng nhiều lần ở các khung giờ khác nhau |
+| thanh_ly_tu | SACH_THANH_LY – DAU_SACH | N:1 | Toàn bộ phía SACH_THANH_LY | Giữ được thông tin đầu sách sau khi thanh lý |
 
 ## 2.3 Đối chiếu yêu cầu "đầy đủ các loại" của đề
 
@@ -147,7 +149,15 @@ Tại mỗi chi nhánh:
 
 ## 2.4 Sơ đồ E-R
 
-Sơ đồ dùng ký hiệu Chen như bài giảng: chữ nhật = tập thực thể, chữ nhật kép = thực thể yếu, thoi = liên kết, thoi kép = liên kết xác định, ellipse = thuộc tính (gạch chân = khóa, gạch chân mảnh = khóa bán phần, nét đứt = dẫn xuất, viền kép = đa trị), tam giác ISA có chữ d = phân tách (disjoint), thoi nét đứt gom_sach = kết hợp (aggregation), thoi màu cam thue_phong = liên kết 3 ngôi giữa DOC_GIA, PHONG_DOC và THU_THU (thủ thư duyệt) mang các thuộc tính của lượt thuê. Ký hiệu liên kết theo bài giảng: nhãn lực lượng 1 / N / M ghi sát mỗi thực thể (1:1, 1:N, N:1, M:N); chân gà đặt ở đầu thực thể phía "nhiều"; đường đôi giữa thực thể và hình thoi = thực thể tham gia toàn bộ, đường đơn = tham gia một phần; ràng buộc (min,max) ghi kèm khi có giới hạn cụ thể: (1,10) cạnh PHIEU_MUON trên gom_sach (mỗi phiếu mượn 1–10 cuốn) và (0,50) trên nhánh DOC_GIA của giu_sach (mỗi độc giả giữ tối đa 50 cuốn). Liên kết đệ quy quan_ly ghi tên vai trò (quản lý, nhân viên) trên hai nhánh; đường đôi từ NGUOI lên tam giác ISA = tổng quát hóa đầy đủ. Riêng sơ đồ lược đồ quan hệ (mục 3.7) dùng ký hiệu chân gà đầy đủ của chuẩn IE cho cạnh khóa ngoại.
+Lược đồ E-R ở Hình 2.1 được vẽ theo ký hiệu Chen trong bài giảng:
+
+- Tập thực thể là hình chữ nhật, thực thể yếu là hình chữ nhật viền kép; liên kết là hình thoi, liên kết xác định là hình thoi viền kép.
+- Thuộc tính là hình ellipse: thuộc tính khóa được gạch chân, khóa bán phần của thực thể yếu có viền xám, thuộc tính dẫn xuất vẽ nét đứt, thuộc tính đa trị có viền kép.
+- Tam giác ISA có chữ d thể hiện cụ thể hóa phân tách (disjoint); đường đôi từ NGUOI lên tam giác nghĩa là mọi người đều phải là độc giả hoặc thủ thư.
+- Hình thoi nét đứt gom_sach là kết hợp (aggregation). Hình thoi màu cam thue_phong là liên kết 3 ngôi giữa DOC_GIA, PHONG_DOC và THU_THU (thủ thư duyệt), mang các thuộc tính của một lượt thuê.
+- Trên mỗi đường nối, nhãn 1, N hoặc M ghi sát thực thể cho biết lực lượng liên kết; đầu thực thể ở phía "nhiều" có thêm ký hiệu chân chim. Đường đôi giữa thực thể và hình thoi nghĩa là thực thể đó tham gia toàn bộ, đường đơn là tham gia một phần.
+- Hai giới hạn cụ thể của đề được ghi bằng cặp (min,max): (1,10) cạnh PHIEU_MUON trên gom_sach, tức mỗi phiếu mượn có từ 1 đến 10 cuốn; (0,50) trên nhánh DOC_GIA của giu_sach, tức mỗi độc giả giữ nhiều nhất 50 cuốn.
+- Liên kết đệ quy quan_ly ghi tên vai trò "quản lý" và "nhân viên" trên hai nhánh.
 
 ![Hình 2.1. Lược đồ E-R của hệ thống quản lý thư viện](../erd/erd_doc.png)
 
@@ -157,7 +167,7 @@ Ký hiệu: khóa chính in **đậm**, khóa ngoại ghi `FK → BẢNG`. Thu�
 
 ## 3.1 Quy tắc ánh xạ đã dùng
 
-| Thành phần ERD | Quy tắc (chương 3b) | Kết quả |
+| Thành phần ERD | Quy tắc ánh xạ | Kết quả |
 | --- | --- | --- |
 | Thực thể mạnh | Mỗi tập thực thể → 1 quan hệ, định danh → PK | CHI_NHANH, THE_LOAI, TAC_GIA, DAU_SACH, PHONG_KHO, GIA_SACH, … |
 | Thuộc tính kép HoTen, DiaChi | Chỉ giữ các thành phần đơn | Ho, Dem, Ten; SoNha, Phuong, Quan, TinhTP |
@@ -209,7 +219,7 @@ Ghi chú: khóa ngoại vòng CHI_NHANH ↔ THU_THU được tạo bằng `ALTER
 
 ## 3.3 Phụ thuộc hàm, khóa và kiểm tra BCNF từng lược đồ
 
-Phương pháp (chương 3c): với mỗi lược đồ, liệt kê tập F đã tối thiểu (vế phải 1 thuộc tính được gộp cho gọn), tính bao đóng của vế trái để tìm khóa, rồi kiểm tra định nghĩa BCNF: *mọi PTH không hiển nhiên X → A đều có X là siêu khóa*.
+Cách làm theo bài giảng: với mỗi lược đồ, liệt kê tập F đã tối thiểu (vế phải 1 thuộc tính được gộp cho gọn), tính bao đóng của vế trái để tìm khóa, rồi kiểm tra định nghĩa BCNF: *mọi PTH không hiển nhiên X → A đều có X là siêu khóa*.
 
 | # | Tập F | Khóa (từ bao đóng) | BCNF? |
 | --- | --- | --- | --- |
@@ -237,11 +247,11 @@ Phương pháp (chương 3c): với mỗi lược đồ, liệt kê tập F đã
 | 22 PHIEU_THUE_PHONG | MaPhieuThue → mọi thuộc tính | MaPhieuThue | Có |
 | 23 CT_MUON_LUU_TRU | MaPhieuMuon, MaCuonSach → HanTra, MaPhieuTra, TienPhat | (MaPhieuMuon, MaCuonSach) | Có |
 
-**Các PTH đã cân nhắc và bác bỏ** (cần nêu trong báo cáo vì đây là chỗ dễ bị hỏi):
+Trong quá trình xác định phụ thuộc hàm, nhóm có cân nhắc một số phụ thuộc nhưng không đưa vào tập F, vì các lý do sau:
 
 - NGUOI: *Phuong → Quan*, *Quan → TinhTP* không đúng ở Việt Nam (nhiều quận/huyện có phường trùng tên, nhiều tỉnh có quận/huyện trùng tên), nên địa chỉ không gây phụ thuộc bắc cầu. Nếu nhóm quyết định coi chúng là PTH thì phải tách bảng PHUONG, QUAN, TINH.
-- CUON_SACH: *MaGia → MaTheLoai* và *MaDauSach → MaTheLoai* đều đúng về nghiệp vụ, nhưng MaTheLoai **không** nằm trong CUON_SACH nên không vi phạm. Ràng buộc "giá và đầu sách cùng thể loại" là ràng buộc liên bảng, cài bằng trigger TRG6.
-- CT_MUON: HanTra được tính từ NgayMuon và thể loại tại thời điểm mượn, nhưng sau đó là một **sự kiện được lưu** (có thể gia hạn), không phải PTH trên các thuộc tính của CT_MUON.
+- CUON_SACH: *MaGia → MaTheLoai* và *MaDauSach → MaTheLoai* đều đúng về nghiệp vụ, nhưng MaTheLoai không nằm trong CUON_SACH nên không vi phạm. Ràng buộc "giá và đầu sách cùng thể loại" là ràng buộc liên bảng, cài bằng trigger TRG6.
+- CT_MUON: HanTra được tính từ NgayMuon và thể loại tại thời điểm mượn, nhưng sau đó là một giá trị được lưu lại tại lúc mượn (có thể gia hạn), không phải PTH trên các thuộc tính của CT_MUON.
 
 ## 3.4 Thuộc tính dẫn xuất được lưu
 
@@ -250,7 +260,7 @@ Phương pháp (chương 3c): với mỗi lược đồ, liệt kê tập F đã
 | GIA_SACH.SoLuongHienCo | Đề yêu cầu "số lượng sách trên giá giảm/tăng" khi mượn/trả | Trigger TRG4 |
 | PHIEU_PHAT.SoTien | Ảnh chụp số tiền tại thời điểm trả; phí phạt có thể đổi theo NgayApDung | Trigger TRG3 dùng fn_TinhTienPhat |
 | PHIEU_THUE_PHONG.TongTien | Giá phòng có thể thay đổi sau khi đặt | Tính trong TX7 |
-| CUON_SACH.TuoiThoConLaiThang | Trạng thái của cuốn, giảm theo số lần mượn | Trigger TRG5 |
+| CUON_SACH.TuoiThoConLaiThang | Trạng thái của cuốn, giảm theo thời gian và theo số lần mượn | Trigger TRG5 khi mượn; thủ tục sp_CapNhatTuoiTho do event ev_CapNhatTuoiTho gọi mỗi ngày |
 
 ## 3.5 Ví dụ quá trình chuẩn hóa từ dạng chưa chuẩn
 
@@ -268,7 +278,7 @@ F = { MaPhieuMuon → NgayMuon, MaDocGia, MaThuThu;
       MaPhieuMuon, MaCuonSach → HanTra }
 
 **Tìm khóa** bằng thuật toán Closure: MaPhieuMuon và MaCuonSach không xuất hiện ở vế phải của PTH nào nên phải thuộc mọi khóa.
-{MaPhieuMuon, MaCuonSach}⁺: khởi tạo {MaPhieuMuon, MaCuonSach} → thêm NgayMuon, MaDocGia, MaThuThu → TenDocGia, TenThuThu → MaDauSach → TenSach, MaTheLoai → SoNgayMuon → HanTra = toàn bộ R. Không tập con thực sự nào đủ ⇒ **K = (MaPhieuMuon, MaCuonSach)** là khóa duy nhất. Thuộc tính khóa: MaPhieuMuon, MaCuonSach.
+{MaPhieuMuon, MaCuonSach}⁺: khởi tạo {MaPhieuMuon, MaCuonSach} → thêm NgayMuon, MaDocGia, MaThuThu → TenDocGia, TenThuThu → MaDauSach → TenSach, MaTheLoai → SoNgayMuon → HanTra = toàn bộ R. Không tập con thực sự nào đủ ⇒ K = (MaPhieuMuon, MaCuonSach) là khóa duy nhất. Thuộc tính khóa: MaPhieuMuon, MaCuonSach.
 
 **1NF → 2NF.** Có PTH bộ phận: MaPhieuMuon → NgayMuon, MaDocGia, MaThuThu (và theo bắc cầu TenDocGia, TenThuThu); MaCuonSach → MaDauSach (và TenSach, MaTheLoai, SoNgayMuon). Tách theo phần khóa mà chúng phụ thuộc:
 - R1(MaPhieuMuon, NgayMuon, MaDocGia, TenDocGia, MaThuThu, TenThuThu)
@@ -305,7 +315,7 @@ G = { MaCuonSach → MaDauSach, STT, MaTheLoai;  MaDauSach → MaTheLoai;  MaDau
 
 ## 3.7 Sơ đồ lược đồ quan hệ
 
-Sơ đồ được sinh tự động từ `information_schema` của CSDL đã cài đặt (script `gen_tudien.py`): mỗi khung là một quan hệ, khóa chính in đậm gạch chân, khóa ngoại in nghiêng, mỗi cạnh nối cột khóa ngoại với khóa chính được tham chiếu và dùng ký hiệu chân gà suy ra từ ràng buộc thật: đầu bảng chứa khóa ngoại là không hoặc nhiều (không hoặc một nếu cột khóa ngoại là UNIQUE), đầu bảng được tham chiếu là một và chỉ một (không hoặc một nếu khóa ngoại cho phép NULL). Màu nền tiêu đề chia 4 nhóm nghiệp vụ: con người (xanh dương), sách và kho (xanh lá), mượn trả (cam), phòng đọc (vàng).
+Hình 3.1 được vẽ tự động từ `information_schema` của CSDL đã cài đặt (chương trình `gen_tudien.py`), nên luôn khớp với các bảng thật. Mỗi khung là một quan hệ; khóa chính in đậm và gạch chân, khóa ngoại in nghiêng. Mỗi đường nối đi từ cột khóa ngoại tới khóa chính mà nó tham chiếu, hai đầu đường dùng ký hiệu chân chim: phía bảng chứa khóa ngoại là "không hoặc nhiều" (hoặc "không hoặc một" nếu cột khóa ngoại là UNIQUE), phía bảng được tham chiếu là "một và chỉ một" (hoặc "không hoặc một" nếu khóa ngoại được phép NULL). Màu nền dòng tiêu đề chia các bảng thành bốn nhóm: con người (xanh dương), sách và kho (xanh lá), mượn trả (cam), phòng đọc (vàng).
 
 ![Hình 3.1. Sơ đồ lược đồ quan hệ với các liên kết khóa chính – khóa ngoại](../erd/luoc_do_quan_he.png)
 
@@ -550,23 +560,23 @@ Từ điển dữ liệu được trích tự động từ `information_schema` 
 
 ## 4.1 Môi trường và quy trình cài đặt
 
-- Hệ quản trị: **MariaDB** (kiểm thử trên 10.11 LTS, tương thích 11.4 LTS), engine InnoDB, bảng mã `utf8mb4`, collation `utf8mb4_unicode_ci`.
+- Hệ quản trị: MariaDB (kiểm thử trên 10.11 LTS, tương thích 11.4 LTS), engine InnoDB, bảng mã `utf8mb4`, collation `utf8mb4_unicode_ci`.
 - Giao diện: Python 3 + Streamlit + PyMySQL (chỉ gọi stored procedure / view).
 - Mã nguồn chia thành các script chạy theo thứ tự, dựng lại toàn bộ CSDL bằng một lệnh `sh build_all.sh -uroot -p`:
 
 | File | Nội dung |
 | --- | --- |
 | 01_schema.sql | Tạo database QLTV, 23 bảng và toàn bộ ràng buộc PK, FK, UNIQUE, CHECK, DEFAULT |
-| 02_function_procedure.sql | 8 function nghiệp vụ, các procedure thêm/xóa/sửa/tìm kiếm |
+| 02_function_procedure.sql | 8 function nghiệp vụ, các procedure thêm/xóa/sửa/tìm kiếm, báo giá thuê phòng, thủ tục và event cập nhật tuổi thọ sách |
 | 03_trigger.sql | 8 trigger nghiệp vụ (18 trigger con) |
 | 04_transaction.sql | 7 transaction nghiệp vụ dạng procedure |
 | 05_seed.sql | Dữ liệu 3 tháng, sinh bởi gen_seed.py bằng cách gọi chính các transaction |
 | 06_view_baocao.sql | 6 truy vấn hiển thị theo yêu cầu đề (view + procedure) |
 | 07_index_baomat.sql | Chỉ mục tối ưu, vai trò và phân quyền |
-| 08_test.sql | 47 ca kiểm thử tự động |
+| 08_test.sql | 52 ca kiểm thử tự động |
 | 09_phan_tan.sql | Minh họa phân mảnh, cấp phát, nhân bản trên 3 site |
 
-Dữ liệu mẫu không nhập tay mà được sinh bằng chương trình mô phỏng thư viện chạy từng ngày từ 01/07 đến 30/09/2026: mỗi ngày phát sinh lời gọi đăng ký độc giả, mượn sách (TX1), trả sách (TX2), nộp phạt (TX3), gia hạn thẻ, thuê phòng (TX7), và thanh lý sách (TX5) giữa kỳ. Nhờ đó mọi bản ghi đều đi qua trigger và kiểm tra nghiệp vụ, dữ liệu luôn hợp lệ; hạt giống ngẫu nhiên cố định giúp mọi lần dựng cho ra cùng một bộ dữ liệu.
+Dữ liệu mẫu không nhập tay mà được sinh bằng một chương trình mô phỏng thư viện chạy từng ngày từ 01/07 đến 30/09/2026. Mỗi ngày chương trình phát sinh các lời gọi đăng ký độc giả, mượn sách (TX1), trả sách (TX2), nộp phạt (TX3), gia hạn thẻ, thuê phòng (TX7); giữa kỳ có một đợt thanh lý sách (TX5). Như vậy mọi bản ghi đều đi qua trigger và các bước kiểm tra nghiệp vụ, dữ liệu luôn hợp lệ; hạt giống ngẫu nhiên được cố định nên lần dựng nào cũng cho ra cùng một bộ dữ liệu. Cuối file, thủ tục sp_CapNhatTuoiTho đưa tuổi thọ sách về đúng ngày dựng CSDL; sau đó event ev_CapNhatTuoiTho của MariaDB tự cập nhật mỗi ngày (cần bật event_scheduler).
 
 ## 4.2 Một số lưu ý khi cài đặt trên MariaDB
 
@@ -624,11 +634,11 @@ Một số chỉ số vận hành trong 3 tháng:
 | Số lượt mượn (cuốn) | 2217 |
 | Số cuốn đang được mượn ngày 30/09/2026 | 452 |
 | Số cuốn quá hạn ngày 30/09/2026 | 205 |
-| Số phiếu phạt / tổng tiền phạt (đ) | 315 / 111,849,000 |
-| Số cuốn sắp hết hạn sử dụng (< 24 tháng) | 141 |
+| Số phiếu phạt / tổng tiền phạt (đ) | 315 / 111.849.000 |
+| Số cuốn sắp hết hạn sử dụng (còn dưới 24 tháng, tính đến ngày dựng CSDL) | 160 |
 | Số cuốn đã thanh lý | 254 |
 | Độc giả giữ nhiều sách nhất | DG0001 (50 cuốn) |
-| Lượt thuê phòng / doanh thu (đ) | 150 / 65,000,000 |
+| Lượt thuê phòng / doanh thu (đ) | 150 / 65.000.000 |
 
 Dữ liệu mẫu (5 dòng đầu) của một số bảng chính:
 
@@ -646,15 +656,15 @@ Dữ liệu mẫu (5 dòng đầu) của một số bảng chính:
 
 | MaCuonSach | STT | MaGia | NgayNhap | TuoiThoConLaiThang | TrangThai |
 | --- | --- | --- | --- | --- | --- |
-| GT0001-001 | 1 | CN01-K1-GT1 | 2024-04-21 | 67 | DangMuon |
-| GT0001-002 | 2 | CN01-K1-GT1 | 2024-04-21 | 67 | DangMuon |
-| GT0001-003 | 3 | CN02-K1-GT1 | 2023-11-20 | 62 | DangMuon |
-| GT0001-004 | 4 | CN02-K1-GT1 | 2023-11-20 | 63 | DangMuon |
-| GT0001-005 | 5 | CN03-K1-GT1 | 2021-11-23 | 39 | DangMuon |
+| GT0001-001 | 1 | CN01-K1-GT1 | 2024-04-21 | 63 | DangMuon |
+| GT0001-002 | 2 | CN01-K1-GT1 | 2024-04-21 | 63 | DangMuon |
+| GT0001-003 | 3 | CN02-K1-GT1 | 2023-11-20 | 58 | DangMuon |
+| GT0001-004 | 4 | CN02-K1-GT1 | 2023-11-20 | 59 | DangMuon |
+| GT0001-005 | 5 | CN03-K1-GT1 | 2021-11-23 | 35 | DangMuon |
 
 **NGUOI / DOC_GIA**
 
-| MaNguoi | CONCAT_WS(' ',n.Ho,n.Dem,n.Ten) | NgaySinh | Quan | MaChiNhanh | SoThe | NgayHetHan |
+| MaNguoi | HoTen | NgaySinh | Quan | MaChiNhanh | SoThe | NgayHetHan |
 | --- | --- | --- | --- | --- | --- | --- |
 | DG0001 | Võ Hồng Hà | 2008-10-14 | Nam Từ Liêm | CN01 | THE0001 | 2027-06-01 |
 | DG0002 | Nguyễn Thu Giang | 1965-07-15 | Hà Đông | CN02 | THE0002 | 2027-09-03 |
@@ -840,7 +850,9 @@ Tổng cộng: 23 khóa chính, 34 khóa ngoại, 11 ràng buộc UNIQUE, 44 rà
 
 - **Transaction nghiệp vụ (TX1–TX7)** (7): `sp_DangKyDocGia`, `sp_MuonSach`, `sp_NhapLoSach`, `sp_ThanhLySach`, `sp_ThanhToanPhat`, `sp_ThuePhong`, `sp_TraSach`
 - **Báo cáo** (7): `sp_BC_DauSachLuotMuon`, `sp_BC_DocGiaTraMuon`, `sp_BC_PhongTaiThoiDiem`, `sp_BC_SachDaMuon`, `sp_BC_SachDangMuon`, `sp_BC_SachQuaHan`, `sp_BC_SachSapHetHan`
-- **Thêm / xóa / sửa / tìm kiếm** (32): `sp_ChiNhanh_Sua`, `sp_ChiNhanh_Them`, `sp_ChiNhanh_TimKiem`, `sp_ChiNhanh_Xoa`, `sp_CuonSach_ChuyenGia`, `sp_CuonSach_TimKiem`, `sp_CuonSach_Xoa`, `sp_DauSach_Sua`, `sp_DauSach_Them`, `sp_DauSach_TimKiem`, `sp_DauSach_Xoa`, `sp_DocGia_GiaHanThe`, `sp_DocGia_Sua`, `sp_DocGia_TimKiem`, `sp_DocGia_Xoa`, `sp_GiaSach_Sua`, `sp_GiaSach_Them`, `sp_GiaSach_TimKiem`, `sp_GiaSach_Xoa`, `sp_PhongDoc_Sua`, `sp_PhongDoc_Them`, `sp_PhongDoc_TimKiem`, `sp_PhongDoc_Xoa`, `sp_PhongKho_Sua`, `sp_PhongKho_Them`, `sp_PhongKho_TimKiem`, `sp_PhongKho_Xoa`, `sp_ThuePhong_BaoGia`, `sp_ThuThu_Sua`, `sp_ThuThu_Them`, `sp_ThuThu_TimKiem`, `sp_ThuThu_Xoa`
+- **Cập nhật định kỳ** (1): `sp_CapNhatTuoiTho`
+- **Thêm / xóa / sửa / tìm kiếm, báo giá** (32): `sp_ChiNhanh_Sua`, `sp_ChiNhanh_Them`, `sp_ChiNhanh_TimKiem`, `sp_ChiNhanh_Xoa`, `sp_CuonSach_ChuyenGia`, `sp_CuonSach_TimKiem`, `sp_CuonSach_Xoa`, `sp_DauSach_Sua`, `sp_DauSach_Them`, `sp_DauSach_TimKiem`, `sp_DauSach_Xoa`, `sp_DocGia_GiaHanThe`, `sp_DocGia_Sua`, `sp_DocGia_TimKiem`, `sp_DocGia_Xoa`, `sp_GiaSach_Sua`, `sp_GiaSach_Them`, `sp_GiaSach_TimKiem`, `sp_GiaSach_Xoa`, `sp_PhongDoc_Sua`, `sp_PhongDoc_Them`, `sp_PhongDoc_TimKiem`, `sp_PhongDoc_Xoa`, `sp_PhongKho_Sua`, `sp_PhongKho_Them`, `sp_PhongKho_TimKiem`, `sp_PhongKho_Xoa`, `sp_ThuePhong_BaoGia`, `sp_ThuThu_Sua`, `sp_ThuThu_Them`, `sp_ThuThu_TimKiem`, `sp_ThuThu_Xoa`
+- **Event** (1): `ev_CapNhatTuoiTho` (chạy mỗi ngày, gọi sp_CapNhatTuoiTho)
 
 ## 4.7 Đặc tả trigger và transaction nghiệp vụ
 
@@ -854,7 +866,8 @@ Tổng cộng: 23 khóa chính, 34 khóa ngoại, 11 ràng buộc UNIQUE, 44 rà
 | TRG6 | trg_CuonSach_DungGia_Them/Sua (CUON_SACH, BEFORE) | Giá chỉ chứa sách cùng thể loại, không vượt sức chứa; sách hết tuổi thọ tách khỏi lưu thông | Sai thể loại → E301; giá đầy (tính cả cuốn đang mượn) → E304; không sửa mã → E305; tuổi thọ = 0 và đang trên giá → SET NEW.TrangThai = 'ChoThanhLy' |
 | TRG7 | trg_ThuePhong_KhongTrung_Them/Sua (BEFORE) | Một phòng không có 2 lượt thuê trùng giờ | Tồn tại lượt đã duyệt giao khoảng [BatDau, KetThuc) → E201 |
 | TRG8 | trg_DocGia_ChanXoa, trg_DocGia_ChanSuaMa, trg_DocGia_DungLoai, trg_ThuThu_DungLoai | Toàn vẹn độc giả và ISA | Còn giữ sách → E404; còn nợ phạt → E405; sửa mã → E406; bảng con không khớp LoaiNguoi → E407 |
-| TX1 | sp_MuonSach | Lập phiếu mượn 1–10 cuốn | Kiểm tra thẻ (E103), khóa dòng độc giả và các cuốn bằng FOR UPDATE, lập phiếu, chèn chi tiết với hạn trả fn_HanTra; mọi lỗi → ROLLBACK cả phiếu |
+| Tuổi thọ | sp_CapNhatTuoiTho, event ev_CapNhatTuoiTho (chạy mỗi ngày) | Tuổi thọ sách giảm theo thời gian | Tuổi thọ còn lại = tuổi thọ thể loại (tháng) − số tháng kể từ ngày nhập − số lần đã mượn; chỉ cho giảm, không bao giờ tăng; cuốn trên giá về 0 được TRG6 chuyển sang ChoThanhLy |
+| TX1 | sp_MuonSach | Lập phiếu mượn 1–10 cuốn | Kiểm tra thẻ (E103), khóa dòng độc giả và các cuốn bằng FOR UPDATE, cuốn không trên giá hoặc bị lặp trong danh sách → E104, lập phiếu, chèn chi tiết với hạn trả fn_HanTra; mọi lỗi → ROLLBACK cả phiếu |
 | TX2 | sp_TraSach | Trả 1 đến nhiều cuốn | Lập phiếu trả, cập nhật chi tiết mượn; số dòng cập nhật khác số cuốn → E108 và ROLLBACK; trả về tổng phạt |
 | TX3 | sp_ThanhToanPhat | Thu toàn bộ phạt chưa thanh toán | Khóa các phiếu phạt, đánh dấu đã thanh toán; không có nợ → E109 |
 | TX4 | sp_NhapLoSach | Nhập đầu sách mới, tác giả, n cuốn | Tạo đầu sách + tác giả (nếu mới), sinh mã cuốn liên tiếp, xếp lên giá; giá sai thể loại hoặc đầy → ROLLBACK toàn bộ lô |
@@ -904,7 +917,7 @@ Viết tắt: CT = CT_MUON, PM = PHIEU_MUON, CS = CUON_SACH, DS = DAU_SACH, TL =
 | 5 | Sách sắp hết hạn sử dụng (dưới 2 năm) | `v_SachSapHetHan`, `sp_BC_SachSapHetHan(p_MaChiNhanh)` | τ_TuoiTho( π_MaCuonSach, TenSach, MaChiNhanh, TuoiThoConLaiThang( σ_TuoiThoConLaiThang < 24( CS ⋈ DS ⋈ GIA_SACH ⋈ PHONG_KHO ) ) ) |
 | 6 | Phòng đọc có / chưa có người dùng tại một thời điểm t | `sp_BC_PhongTaiThoiDiem(p_MaChiNhanh, p_ThoiDiem)` | Đang dùng: D = π_MaPhongDoc( σ_TrangThai='DaDuyet' ∧ BatDau ≤ t < KetThuc(TP) ); Trống: π_MaPhongDoc(PD) − D. SQL dùng PD ⟕ σ_…(TP) để trả cả hai nhóm trong một bảng. |
 
-Cách hiểu yêu cầu 1: đề ghi "danh sách sách đã được mượn, sắp xếp theo thời gian hạn trả". Vì chỉ sách **chưa trả** mới còn ý nghĩa theo dõi hạn trả, nhóm lấy cách hiểu chính là sách đang được mượn (σ MaPhieuTra = NULL, procedure `sp_BC_SachDangMuon`). Để không bỏ sót cách hiểu theo nghĩa rộng (mọi lượt mượn, kể cả đã trả), nhóm cài đặt thêm `sp_BC_SachDaMuon` có lọc theo khoảng ngày mượn; trên giao diện, ô "Chỉ sách đang được mượn (chưa trả)" chuyển giữa hai cách hiểu (Hình 4.1 và 4.1b).
+Cách hiểu yêu cầu 1: đề ghi "danh sách sách đã được mượn, sắp xếp theo thời gian hạn trả". Vì chỉ sách chưa trả mới còn ý nghĩa theo dõi hạn trả, nhóm lấy cách hiểu chính là sách đang được mượn (σ MaPhieuTra = NULL, procedure `sp_BC_SachDangMuon`). Để không bỏ sót cách hiểu theo nghĩa rộng (mọi lượt mượn, kể cả đã trả), nhóm cài đặt thêm `sp_BC_SachDaMuon` có lọc theo khoảng ngày mượn; trên giao diện, ô "Chỉ sách đang được mượn (chưa trả)" chuyển giữa hai cách hiểu (Hình 4.1 và 4.1b).
 
 Ghi chú: báo cáo 3 và 4 hợp (∪) thêm dữ liệu từ bảng lưu trữ để lượt mượn và tiền phạt của các cuốn đã thanh lý không bị mất khỏi thống kê. Ví dụ phạt dự kiến của báo cáo 2: sách tham khảo quá hạn 84 ngày = 200.000 + 30.000 × 84 = 2.720.000đ.
 
@@ -939,21 +952,21 @@ Kết quả `EXPLAIN` đo trên dữ liệu 3 tháng:
 | Truy vấn | Trước khi có chỉ mục | Sau khi có chỉ mục |
 | --- | --- | --- |
 | Sách đang mượn sắp theo hạn trả | Bắt đầu từ DOC_GIA (quét index 200 dòng), *Using temporary; Using filesort* | Bắt đầu từ CT_MUON qua IX_CTMUON_ChuaTra_HanTra (ref const, 452 dòng, *Using index*), không còn bảng tạm và sắp xếp ngoài |
-| Sách tuổi thọ < 24 tháng | type ALL, quét 1.369 dòng | type range trên IX_CUONSACH_TuoiTho, 141 dòng |
+| Sách tuổi thọ < 24 tháng | type ALL, quét 1.369 dòng | type range trên IX_CUONSACH_TuoiTho, chỉ đọc các cuốn có tuổi thọ dưới 24 tháng (khoảng 150 dòng) |
 
 ## 4.10 An toàn bảo mật
 
-- Hai vai trò: **r_ThuThu** (thực thi các procedure nghiệp vụ hằng ngày, tra cứu, 6 báo cáo; SELECT 2 view) và **r_QuanLy** (kế thừa r_ThuThu, thực thi mọi procedure và đọc mọi bảng).
+- Hai vai trò: r_ThuThu (thực thi các procedure nghiệp vụ hằng ngày, tra cứu, 6 báo cáo; SELECT 2 view) và r_QuanLy (kế thừa r_ThuThu, thực thi mọi procedure và đọc mọi bảng).
 - Không cấp quyền INSERT/UPDATE/DELETE trên bảng cho ai: mọi thay đổi đi qua procedure (SQL SECURITY DEFINER), nên trigger, ràng buộc và kiểm tra trong transaction không thể bị bỏ qua. MariaDB không có DENY, nên nguyên tắc là cấp quyền tối thiểu.
 - Tài khoản mẫu: `tt_cn01` (r_ThuThu), `ql_thuvien` (r_QuanLy). Kiểm chứng: `tt_cn01` gọi `sp_BC_SachSapHetHan` thành công, nhưng `SELECT … FROM CUON_SACH` bị từ chối (ERROR 1142).
 
 ## 4.11 Kiểm thử ràng buộc, trigger và transaction
 
-`08_test.sql` chạy 47 ca tự động. Mỗi ca thực thi một lệnh qua thủ tục kiểm thử (dynamic SQL + EXIT HANDLER bắt lỗi), so mã lỗi hoặc giá trị thực tế với kỳ vọng và ghi vào bảng KET_QUA_KIEM_THU. Kết quả: **47/47 PASS**.
+File `08_test.sql` gồm 52 ca kiểm thử tự động. Mỗi ca chạy một lệnh thông qua thủ tục kiểm thử (dùng dynamic SQL và EXIT HANDLER để bắt lỗi), so mã lỗi hoặc giá trị thực tế với kết quả mong đợi rồi ghi vào bảng KET_QUA_KIEM_THU. Cả 52 ca đều đạt. Bảng dưới tóm tắt theo nhóm, chi tiết từng ca ở cuối mục.
 
 | Nhóm | Ca hợp lệ | Ca bị chặn / kiểm tra |
 | --- | --- | --- |
-| TRG1 + TX1 | Mượn đúng 10 cuốn | 11 cuốn qua TX1 → E101 và không phiếu nào được tạo (ROLLBACK); chèn tay cuốn thứ 11 → E101 |
+| TRG1 + TX1 | Mượn đúng 10 cuốn | 11 cuốn qua TX1 → E101 và không phiếu nào được tạo (ROLLBACK); chèn tay cuốn thứ 11 → E101; danh sách có mã cuốn bị lặp → E104 |
 | TRG2 | — | Mượn cuốn đang được mượn → E104; DG0001 đang giữ 50 cuốn mượn thêm → E102 |
 | TRG3 + TX2 | Trả muộn 5 ngày 2 cuốn trong 1 phiếu trả; phiếu phạt = cơ bản + 5 × phạt/ngày | Trả cuốn không mượn → E108; sửa phiếu trả đã trả → E106; ngày trả trước ngày mượn → E105 |
 | TRG4 | Số lượng trên giá giảm/tăng đúng bằng số cuốn của giá đó được mượn/trả | Toàn hệ thống: SoLuongHienCo khớp 100% |
@@ -961,6 +974,8 @@ Kết quả `EXPLAIN` đo trên dữ liệu 3 tháng:
 | TRG6 + TX4 | Nhập lô 3 cuốn, mã TR0901-001…003; cuốn hết tuổi thọ tự chuyển ChoThanhLy | Sách TK vào giá TR → E301 và đầu sách mới không được tạo (ROLLBACK); giá đầy → E304; chuyển giá sai thể loại → E301 |
 | TX5 | Thanh lý: cuốn chuyển sang SACH_THANH_LY, rời CUON_SACH | — |
 | TRG7 + TX7 | Thuê 2 giờ = 100.000đ | Trùng giờ → E201; vượt sức chứa → E202; hội thảo 1 giờ → E203; còn nợ phạt → E110; lẻ phút → CHECK |
+| Báo giá thuê phòng | Hội thảo 3 giờ = 900.000đ; mọi lượt thuê đã lưu có tiền khớp công thức báo giá | — |
+| Tuổi thọ theo thời gian | Hai tháng sau ngày nhập, cuốn truyện còn 180 − 2 = 178 tháng | Chạy lại với ngày sớm hơn không làm tuổi thọ tăng lên |
 | TRG8 | Xóa độc giả không giữ sách, không nợ | Đang giữ sách → E404; còn nợ phạt → E405; sửa mã → E406 |
 | TX3 | Thanh toán phạt | Không còn nợ → E109 |
 | TX6 | Đăng ký với 2 SĐT, thẻ hết hạn sau 1 năm | SĐT sai → CHECK và không còn bản ghi NGUOI (ROLLBACK); không có SĐT → E408 |
@@ -968,57 +983,62 @@ Kết quả `EXPLAIN` đo trên dữ liệu 3 tháng:
 
 Chi tiết từng ca:
 
-Kết quả: **47/47 ca PASS**.
+Kết quả: 52/52 ca đạt.
 
 | Mã ca | Mô tả | Kỳ vọng | Thực tế | Kết quả |
 | --- | --- | --- | --- | --- |
-| TX1-a | Mượn 11 cuốn trong 1 phiếu bị chặn | E101 | E101 | PASS |
-| TX1-b | Sau khi bị chặn không có phiếu mượn nào được tạo (ROLLBACK) | 0 | 0 | PASS |
-| TX1-c | Mượn đúng 10 cuốn hợp lệ | OK | OK | PASS |
-| TRG1 | Chèn trực tiếp cuốn thứ 11 vào phiếu đã có 10 cuốn | E101 | E101 | PASS |
-| TRG4-a | Số lượng trên giá giảm đúng bằng số cuốn của giá đó vừa được mượn | 27 | 27 | PASS |
-| TRG5 | Tuổi thọ cuốn sách giảm 1 tháng sau khi mượn | 5 | 5 | PASS |
-| TX1-d | Hạn trả = ngày mượn + số ngày mượn của thể loại/đầu sách | 1 | 1 | PASS |
-| TRG2-a | Mượn cuốn đang được người khác mượn | E104 | E104 | PASS |
-| TRG2-b | Độc giả DG0001 đang giữ 50 cuốn mượn thêm 1 cuốn | E102 | E102 | PASS |
-| TX2-a | Trả cuốn mà độc giả không mượn | E108 | E108 | PASS |
-| TX2-b | Trả muộn 5 ngày 2 cuốn (1 phiếu trả, nhiều cuốn) | OK | OK | PASS |
-| TRG3-a | Phiếu phạt tự lập cho cuốn trả muộn, tiền = cơ bản + 5 × phạt/ngày | 1 | 1 | PASS |
-| TRG4-b | Số lượng trên giá tăng đúng bằng số cuốn của giá đó vừa được trả | 29 | 29 | PASS |
-| TRG3-b | Sửa phiếu trả của dòng mượn đã trả | E106 | E106 | PASS |
-| TRG3-c | Ngày trả trước ngày mượn | E105 | E105 | PASS |
-| TX7-a | Độc giả còn nợ phạt thuê phòng bị chặn | E110 | E110 | PASS |
-| TRG8-b | Xóa độc giả không giữ sách nhưng còn nợ tiền phạt | E405 | E405 | PASS |
-| TX3-a | Thanh toán phạt | OK | OK | PASS |
-| TX3-b | Thanh toán khi không còn khoản nợ | E109 | E109 | PASS |
-| TX7-b | Thuê phòng nhóm 2 giờ hợp lệ | OK | OK | PASS |
-| TX7-c | Tiền thuê = 2 giờ × 50.000đ | 100000 | 100000 | PASS |
-| TRG7 | Thuê trùng khung giờ 10:00–12:00 | E201 | E201 | PASS |
-| TX7-d | Số người vượt sức chứa | E202 | E202 | PASS |
-| TX7-e | Thuê phòng hội thảo 1 giờ (tối thiểu 2 giờ) | E203 | E203 | PASS |
-| CK-THUE | Thuê lẻ phút (CHECK giờ tròn) | CK | CK | PASS |
-| TX6-a | Đăng ký độc giả mới với 2 số điện thoại | OK | OK | PASS |
-| TX6-b | Độc giả mới có thẻ hết hạn sau 1 năm | 2027-10-05 | 2027-10-05 | PASS |
-| TX6-c | Đăng ký với số điện thoại sai định dạng | CK | CK | PASS |
-| TX6-d | Sau lỗi SĐT không còn bản ghi NGUOI nào được thêm (ROLLBACK) | 216 | 216 | PASS |
-| TX6-e | Đăng ký không có số điện thoại | E408 | E408 | PASS |
-| TRG8-a | Xóa độc giả DG0001 đang giữ sách | E404 | E404 | PASS |
-| TRG8-c | Sửa mã độc giả | E406 | E406 | PASS |
-| TRG8-d | Xóa độc giả mới đăng ký (không giữ sách, không nợ) | OK | OK | PASS |
-| TX4-a | Nhập lô 3 cuốn đầu sách mới vào giá đúng thể loại | OK | OK | PASS |
-| TX4-b | Mã cuốn sinh đúng định dạng đầu sách + STT | TR0901-001,TR0901-002,TR0901-003 | TR0901-001,TR0901-002,TR0901-003 | PASS |
-| TX4-c | Nhập sách tham khảo vào giá truyện | E301 | E301 | PASS |
-| TX4-d | Đầu sách TK0901 không được tạo vì giao dịch bị ROLLBACK | 0 | 0 | PASS |
-| TRG6-a | Chuyển cuốn truyện sang giá tham khảo | E301 | E301 | PASS |
-| TRG6-b | Nhập thêm vào giá đã đầy | E304 | E304 | PASS |
-| CK-DAUSACH | Đầu sách mã TK nhưng thể loại TR (CHECK) | CK | CK | PASS |
-| TRG6-c | Cuốn trên giá hết tuổi thọ tự chuyển ChoThanhLy | ChoThanhLy | ChoThanhLy | PASS |
-| TX5-a | Thanh lý sách hết niên hạn | OK | OK | PASS |
-| TX5-b | Cuốn đã chuyển sang SACH_THANH_LY và rời khỏi CUON_SACH | 10 | 10 | PASS |
-| TV-1 | SoLuongHienCo của mọi giá khớp số cuốn không đang mượn | 0 | 0 | PASS |
-| TV-2 | Không độc giả nào giữ quá 50 cuốn | 1 | 1 | PASS |
-| TV-3 | Không phiếu mượn nào quá 10 cuốn | 0 | 0 | PASS |
-| TV-4 | Không có 2 lượt thuê đã duyệt trùng giờ cùng phòng | 0 | 0 | PASS |
+| TX1-a | Mượn 11 cuốn trong 1 phiếu bị chặn | E101 | E101 | Đạt |
+| TX1-b | Sau khi bị chặn không có phiếu mượn nào được tạo (ROLLBACK) | 0 | 0 | Đạt |
+| TX1-c | Mượn đúng 10 cuốn hợp lệ | OK | OK | Đạt |
+| TRG1 | Chèn trực tiếp cuốn thứ 11 vào phiếu đã có 10 cuốn | E101 | E101 | Đạt |
+| TRG4-a | Số lượng trên giá giảm đúng bằng số cuốn của giá đó vừa được mượn | 27 | 27 | Đạt |
+| TRG5 | Tuổi thọ cuốn sách giảm 1 tháng sau khi mượn | 1 | 1 | Đạt |
+| TX1-d | Hạn trả = ngày mượn + số ngày mượn của thể loại/đầu sách | 1 | 1 | Đạt |
+| TRG2-a | Mượn cuốn đang được người khác mượn | E104 | E104 | Đạt |
+| TRG2-b | Độc giả DG0001 đang giữ 50 cuốn mượn thêm 1 cuốn | E102 | E102 | Đạt |
+| TX1-e | Danh sách mượn có mã cuốn bị lặp | E104 | E104 | Đạt |
+| TX2-a | Trả cuốn mà độc giả không mượn | E108 | E108 | Đạt |
+| TX2-b | Trả muộn 5 ngày 2 cuốn (1 phiếu trả, nhiều cuốn) | OK | OK | Đạt |
+| TRG3-a | Phiếu phạt tự lập cho cuốn trả muộn, tiền = cơ bản + 5 × phạt/ngày | 1 | 1 | Đạt |
+| TRG4-b | Số lượng trên giá tăng đúng bằng số cuốn của giá đó vừa được trả | 29 | 29 | Đạt |
+| TRG3-b | Sửa phiếu trả của dòng mượn đã trả | E106 | E106 | Đạt |
+| TRG3-c | Ngày trả trước ngày mượn | E105 | E105 | Đạt |
+| TX7-a | Độc giả còn nợ phạt thuê phòng bị chặn | E110 | E110 | Đạt |
+| TRG8-b | Xóa độc giả không giữ sách nhưng còn nợ tiền phạt | E405 | E405 | Đạt |
+| TX3-a | Thanh toán phạt | OK | OK | Đạt |
+| TX3-b | Thanh toán khi không còn khoản nợ | E109 | E109 | Đạt |
+| TX7-b | Thuê phòng nhóm 2 giờ hợp lệ | OK | OK | Đạt |
+| TX7-c | Tiền thuê = 2 giờ × 50.000đ | 100000 | 100000 | Đạt |
+| BG-1 | Báo giá phòng hội thảo 3 giờ = 3 × 300.000đ | 900000 | 900000 | Đạt |
+| BG-2 | Mọi lượt thuê đã lưu có tiền khớp công thức báo giá | 0 | 0 | Đạt |
+| TRG7 | Thuê trùng khung giờ 10:00–12:00 | E201 | E201 | Đạt |
+| TX7-d | Số người vượt sức chứa | E202 | E202 | Đạt |
+| TX7-e | Thuê phòng hội thảo 1 giờ (tối thiểu 2 giờ) | E203 | E203 | Đạt |
+| CK-THUE | Thuê lẻ phút (CHECK giờ tròn) | CK | CK | Đạt |
+| TX6-a | Đăng ký độc giả mới với 2 số điện thoại | OK | OK | Đạt |
+| TX6-b | Độc giả mới có thẻ hết hạn sau 1 năm | 2027-10-05 | 2027-10-05 | Đạt |
+| TX6-c | Đăng ký với số điện thoại sai định dạng | CK | CK | Đạt |
+| TX6-d | Sau lỗi SĐT không còn bản ghi NGUOI nào được thêm (ROLLBACK) | 216 | 216 | Đạt |
+| TX6-e | Đăng ký không có số điện thoại | E408 | E408 | Đạt |
+| TRG8-a | Xóa độc giả DG0001 đang giữ sách | E404 | E404 | Đạt |
+| TRG8-c | Sửa mã độc giả | E406 | E406 | Đạt |
+| TRG8-d | Xóa độc giả mới đăng ký (không giữ sách, không nợ) | OK | OK | Đạt |
+| TX4-a | Nhập lô 3 cuốn đầu sách mới vào giá đúng thể loại | OK | OK | Đạt |
+| TX4-b | Mã cuốn sinh đúng định dạng đầu sách + STT | TR0901-001,TR0901-002,TR0901-003 | TR0901-001,TR0901-002,TR0901-003 | Đạt |
+| TX4-c | Nhập sách tham khảo vào giá truyện | E301 | E301 | Đạt |
+| TX4-d | Đầu sách TK0901 không được tạo vì giao dịch bị ROLLBACK | 0 | 0 | Đạt |
+| TRG6-a | Chuyển cuốn truyện sang giá tham khảo | E301 | E301 | Đạt |
+| TRG6-b | Nhập thêm vào giá đã đầy | E304 | E304 | Đạt |
+| CK-DAUSACH | Đầu sách mã TK nhưng thể loại TR (CHECK) | CK | CK | Đạt |
+| TRG6-c | Cuốn trên giá hết tuổi thọ tự chuyển ChoThanhLy | ChoThanhLy | ChoThanhLy | Đạt |
+| TX5-a | Thanh lý sách hết niên hạn | OK | OK | Đạt |
+| TX5-b | Cuốn đã chuyển sang SACH_THANH_LY và rời khỏi CUON_SACH | 10 | 10 | Đạt |
+| TT-1 | Hai tháng sau ngày nhập, tuổi thọ còn 180 − 2 = 178 tháng | 178 | 178 | Đạt |
+| TT-2 | Chạy lại với ngày sớm hơn không làm tuổi thọ tăng lên | 178 | 178 | Đạt |
+| TV-1 | SoLuongHienCo của mọi giá khớp số cuốn không đang mượn | 0 | 0 | Đạt |
+| TV-2 | Không độc giả nào giữ quá 50 cuốn | 1 | 1 | Đạt |
+| TV-3 | Không phiếu mượn nào quá 10 cuốn | 0 | 0 | Đạt |
+| TV-4 | Không có 2 lượt thuê đã duyệt trùng giờ cùng phòng | 0 | 0 | Đạt |
 
 ## 4.12 Bảng mã lỗi nghiệp vụ
 
@@ -1028,7 +1048,7 @@ Kết quả: **47/47 ca PASS**.
 | E101 | Quá 10 cuốn mỗi lần mượn | TRG1, TX1 |
 | E102 | Độc giả đã giữ 50 cuốn | TRG2 |
 | E103 | Thẻ hết hạn | TX1, TX7 |
-| E104 | Cuốn không có trên giá | TRG2, TX1 |
+| E104 | Cuốn không có trên giá, hoặc bị lặp trong danh sách mượn | TRG2, TX1 |
 | E105 | Ngày trả trước ngày mượn | TRG3 |
 | E106 | Sửa phiếu trả của dòng đã trả | TRG3 |
 | E107 | Phiếu trả và phiếu mượn khác độc giả | TRG3 |
@@ -1057,35 +1077,39 @@ Kết quả: **47/47 ca PASS**.
 
 ## 4.13 Giao diện ứng dụng
 
-Ứng dụng có 7 chức năng ở thanh bên trái (mượn sách; trả sách và phạt; phòng đọc; độc giả; sách và kho; thủ thư và chi nhánh; báo cáo); người dùng chọn chi nhánh và thủ thư thao tác. Mỗi đối tượng chính đều có đủ thêm, sửa, xóa, tìm kiếm trên giao diện: độc giả, thủ thư, chi nhánh (đổi thủ thư trưởng), đầu sách, cuốn sách (chuyển giá, xóa, thanh lý), giá sách, phòng kho, phòng đọc. Các bảng dữ liệu bấm chọn được cả hàng: form sửa/xóa lấy theo hàng đang chọn và bảng tự nạp lại, bỏ chọn sau mỗi thao tác; các mã đã có trong CSDL (độc giả, cuốn sách khi mượn/trả, phòng, giá, đầu sách khi nhập lô) được chọn từ danh sách có ô gõ để lọc thay vì gõ tay. Trang phòng đọc hiện tiền thuê dự kiến (procedure `sp_ThuePhong_BaoGia`, dùng chung function `fn_TienThuePhong` với TX7) cùng cảnh báo E202/E203 ngay khi đổi phòng, khung giờ hoặc số người. Mỗi nút bấm gọi đúng một stored procedure; khi CSDL từ chối (SIGNAL, CHECK, khóa ngoại), giao diện hiển thị nguyên văn thông báo lỗi, chứng tỏ luật nghiệp vụ nằm hoàn toàn trong CSDL. Kết nối dùng tài khoản `ql_thuvien` (vai trò r_QuanLy), không có quyền ghi trực tiếp vào bảng.
+Ứng dụng có bảy chức năng ở thanh bên trái: mượn sách, trả sách và phạt, phòng đọc, độc giả, sách và kho, thủ thư và chi nhánh, báo cáo. Trước khi thao tác, thủ thư chọn chi nhánh làm việc và tên của mình. Các đối tượng chính (độc giả, thủ thư, chi nhánh, đầu sách, cuốn sách, giá sách, phòng kho, phòng đọc) đều có thể thêm, sửa, xóa và tìm kiếm ngay trên giao diện.
 
-Giao diện được kiểm thử tự động bằng Playwright (script `app/chup_man_hinh.py`): trình duyệt mở từng màn hình, nhập dữ liệu, bấm nút và đọc thông báo trả về. Kết quả: **23/23 thao tác đúng kỳ vọng**.
+Để thủ thư ít phải gõ, các bảng dữ liệu cho phép bấm vào một hàng để chọn; ô sửa sẽ hiện sẵn giá trị của hàng đó, và sau mỗi thao tác bảng được nạp lại. Những mã đã có trong CSDL như độc giả, cuốn sách, phòng, giá, đầu sách được chọn từ danh sách, có ô gõ để lọc nhanh. Ở trang mượn và trả, thủ thư có thể bấm thẳng nhiều hàng trong bảng sách để đưa các cuốn đó vào phiếu. Trang phòng đọc hiện tiền thuê dự kiến ngay khi đổi phòng, khung giờ hoặc số người; số tiền này lấy từ procedure `sp_ThuePhong_BaoGia`, dùng chung công thức `fn_TienThuePhong` với TX7 nên luôn khớp với tiền thực thu, kèm cảnh báo E202, E203 nếu thuê sai quy định.
+
+Mỗi nút bấm gọi đúng một stored procedure. Khi CSDL từ chối một thao tác (do SIGNAL, CHECK hoặc khóa ngoại), giao diện hiện nguyên văn thông báo lỗi của CSDL; bản thân giao diện không tự kiểm tra luật nghiệp vụ nào. Ứng dụng kết nối bằng tài khoản `ql_thuvien` (vai trò r_QuanLy), tài khoản này không có quyền ghi trực tiếp vào bảng.
+
+Giao diện được kiểm thử tự động bằng Playwright (chương trình `app/chup_man_hinh.py`): trình duyệt lần lượt mở từng màn hình, chọn dữ liệu, bấm nút và đọc thông báo trả về. Kết quả 23/23 thao tác cho đúng kết quả mong đợi.
 
 | # | Thao tác (nút bấm) | Kỳ vọng | Thông báo của hệ thống | Kết quả |
 | --- | --- | --- | --- | --- |
-| 1 | Lập phiếu mượn | Thành công | Đã lập phiếu mượn số: 832 | PASS |
-| 2 | Lập phiếu mượn | Bị chặn | E101: Mỗi lần mượn tối đa 10 cuốn sách | PASS |
-| 3 | Lập phiếu trả | Thành công | Đã trả: phiếu 1569, tiền phạt 3230000 đ | PASS |
-| 4 | Thanh toán toàn bộ phạt | Thành công | Đã thu: 3,230,000 đ | PASS |
-| 5 | Thêm phòng | Thành công | Đã thêm phòng CN01-N6 | PASS |
-| 6 | Sửa tên / sức chứa | Thành công | Đã sửa phòng CN01-N6 | PASS |
-| 7 | Xóa phòng | Thành công | Đã xóa phòng CN01-N6 | PASS |
-| 8 | Đăng ký | Thành công | Đã đăng ký: mã DG0201, thẻ THE0201 | PASS |
-| 9 | Lưu sửa | Thành công | Đã sửa DG0201 | PASS |
-| 10 | Gia hạn thẻ 1 năm | Thành công | Đã gia hạn thẻ DG0201 | PASS |
-| 11 | Xóa độc giả | Thành công | Đã xóa DG0201 | PASS |
-| 12 | Xóa độc giả | Bị chặn | E404: Độc giả còn giữ sách, không xóa được | PASS |
-| 13 | Thêm phòng kho | Thành công | Đã thêm CN01-K3 | PASS |
-| 14 | Thêm giá | Thành công | Đã thêm giá CN01-K1-TR9 | PASS |
-| 15 | Sửa sức chứa | Thành công | Đã sửa giá CN01-K1-TR9 | PASS |
-| 16 | Xóa giá | Thành công | Đã xóa giá CN01-K1-TR9 | PASS |
-| 17 | Xóa phòng kho | Thành công | Đã xóa CN01-K3 | PASS |
-| 18 | Xóa cuốn sách | Thành công | Đã xóa GT0026-001 | PASS |
-| 19 | Xóa cuốn sách | Bị chặn | E303: Cuốn sách đã có lịch sử mượn, hãy dùng thanh lý thay vì xóa | PASS |
-| 20 | Thêm thủ thư | Thành công | Đã thêm thủ thư mã: TT016 | PASS |
-| 21 | Lưu sửa thủ thư | Thành công | Đã sửa TT016 | PASS |
-| 22 | Xóa thủ thư | Thành công | Đã xóa TT016 | PASS |
-| 23 | Xóa thủ thư | Bị chặn | E403: Thủ thư đang là trưởng chi nhánh, đổi trưởng trước khi xóa | PASS |
+| 1 | Lập phiếu mượn | Thành công | Đã lập phiếu mượn số: 832 | Đạt |
+| 2 | Lập phiếu mượn | Bị chặn | E101: Mỗi lần mượn tối đa 10 cuốn sách | Đạt |
+| 3 | Lập phiếu trả | Thành công | Đã trả: phiếu 1569, tiền phạt 3.470.000 đ | Đạt |
+| 4 | Thanh toán toàn bộ phạt | Thành công | Đã thu: 3.470.000 đ | Đạt |
+| 5 | Thêm phòng | Thành công | Đã thêm phòng CN01-N6 | Đạt |
+| 6 | Sửa tên / sức chứa | Thành công | Đã sửa phòng CN01-N6 | Đạt |
+| 7 | Xóa phòng | Thành công | Đã xóa phòng CN01-N6 | Đạt |
+| 8 | Đăng ký | Thành công | Đã đăng ký: mã DG0201, thẻ THE0201 | Đạt |
+| 9 | Lưu sửa | Thành công | Đã sửa DG0201 | Đạt |
+| 10 | Gia hạn thẻ 1 năm | Thành công | Đã gia hạn thẻ DG0201 | Đạt |
+| 11 | Xóa độc giả | Thành công | Đã xóa DG0201 | Đạt |
+| 12 | Xóa độc giả | Bị chặn | E404: Độc giả còn giữ sách, không xóa được | Đạt |
+| 13 | Thêm phòng kho | Thành công | Đã thêm CN01-K3 | Đạt |
+| 14 | Thêm giá | Thành công | Đã thêm giá CN01-K1-TR9 | Đạt |
+| 15 | Sửa sức chứa | Thành công | Đã sửa giá CN01-K1-TR9 | Đạt |
+| 16 | Xóa giá | Thành công | Đã xóa giá CN01-K1-TR9 | Đạt |
+| 17 | Xóa phòng kho | Thành công | Đã xóa CN01-K3 | Đạt |
+| 18 | Xóa cuốn sách | Thành công | Đã xóa GT0026-001 | Đạt |
+| 19 | Xóa cuốn sách | Bị chặn | E303: Cuốn sách đã có lịch sử mượn, hãy dùng thanh lý thay vì xóa | Đạt |
+| 20 | Thêm thủ thư | Thành công | Đã thêm thủ thư mã: TT016 | Đạt |
+| 21 | Lưu sửa thủ thư | Thành công | Đã sửa TT016 | Đạt |
+| 22 | Xóa thủ thư | Thành công | Đã xóa TT016 | Đạt |
+| 23 | Xóa thủ thư | Bị chặn | E403: Thủ thư đang là trưởng chi nhánh, đổi trưởng trước khi xóa | Đạt |
 
 ![Hình 4.7. Màn hình mượn sách](../anh/01_muon_sach.png)
 
@@ -1109,7 +1133,7 @@ Giao diện được kiểm thử tự động bằng Playwright (script `app/ch
 
 ![Hình 4.17. Xóa độc giả còn giữ sách bị trigger chặn (E404)](../anh/05b_xoa_doc_gia_bi_chan.png)
 
-![Hình 4.18. Quản lý sách và kho: tìm kiếm đầu sách](../anh/06_sach_kho.png)
+![Hình 4.18. Quản lý sách và kho: danh sách đầu sách](../anh/06_sach_kho.png)
 
 ![Hình 4.19. Thêm phòng kho thành công](../anh/06a_them_phong_kho.png)
 
@@ -1117,7 +1141,7 @@ Giao diện được kiểm thử tự động bằng Playwright (script `app/ch
 
 ![Hình 4.21. Xóa cuốn sách đã có lịch sử mượn bị chặn (E303)](../anh/06c_xoa_cuon_bi_chan.png)
 
-![Hình 4.22. Tìm kiếm thủ thư](../anh/07_thu_thu.png)
+![Hình 4.22. Danh sách thủ thư của chi nhánh](../anh/07_thu_thu.png)
 
 ![Hình 4.23. Thêm thủ thư mới thành công](../anh/07a_them_thu_thu.png)
 
@@ -1127,24 +1151,24 @@ Giao diện được kiểm thử tự động bằng Playwright (script `app/ch
 
 ## 5.1 Bối cảnh và kiến trúc
 
-Thư viện có 3 chi nhánh, mỗi chi nhánh là một **site** có máy chủ CSDL riêng, nối với nhau qua mạng WAN: S1 = CN01 Cầu Giấy (trụ sở), S2 = CN02 Hà Đông, S3 = CN03 Hoàn Kiếm. Phần lớn nghiệp vụ (mượn, trả, thuê phòng, tra cứu kho) diễn ra tại chi nhánh nơi độc giả đăng ký, nên dữ liệu được đặt tại chỗ để giảm truyền thông và cho phép mỗi chi nhánh vẫn hoạt động khi đường mạng tới chi nhánh khác gặp sự cố.
+Thư viện có 3 chi nhánh, mỗi chi nhánh là một site có máy chủ CSDL riêng, nối với nhau qua mạng WAN: S1 = CN01 Cầu Giấy (trụ sở), S2 = CN02 Hà Đông, S3 = CN03 Hoàn Kiếm. Phần lớn nghiệp vụ (mượn, trả, thuê phòng, tra cứu kho) diễn ra tại chi nhánh nơi độc giả đăng ký, nên dữ liệu được đặt tại chỗ để giảm truyền thông và cho phép mỗi chi nhánh vẫn hoạt động khi đường mạng tới chi nhánh khác gặp sự cố.
 
-Kiến trúc: **hệ CSDL phân tán thuần nhất** (cùng MariaDB ở mọi site), mô hình tham chiếu nhiều mức của chương 7a:
+Nhóm chọn kiến trúc hệ CSDL phân tán thuần nhất (cùng MariaDB ở mọi site), theo mô hình tham chiếu nhiều mức trong bài giảng:
 
 | Mức | Nội dung trong thiết kế |
 | --- | --- |
 | Lược đồ toàn cục | 23 quan hệ của mục 3 (database `QLTV`) |
 | Lược đồ phân mảnh | Mục 5.3–5.5: ngang nguyên thủy, ngang dẫn xuất, dọc, lai |
-| Lược đồ cấp phát | Mục 5.6: mảnh nào đặt ở site nào, mảnh nào nhân bản |
+| Lược đồ cấp phát | Mục 5.7: mảnh nào đặt ở site nào, mảnh nào nhân bản |
 | Lược đồ ánh xạ cục bộ | Mỗi site là một database MariaDB `QLTV_CN0k`; view `pt_*` ánh xạ ngược về quan hệ toàn cục |
 
-Mức trong suốt hướng tới: **trong suốt phân mảnh** – ứng dụng chỉ làm việc với quan hệ toàn cục, thông qua các view tái thiết `pt_*`.
+Mức trong suốt nhóm hướng tới là trong suốt phân mảnh: ứng dụng chỉ làm việc với quan hệ toàn cục, thông qua các view tái thiết `pt_*`.
 
 ## 5.2 Số liệu giả định dùng cho thiết kế
 
 | Thông số | S1 CN01 | S2 CN02 | S3 CN03 | Ghi chú |
 | --- | --- | --- | --- | --- |
-| Độc giả | 2.400 | 1.800 | 1.800 | Tổng 6.000 khi hệ thống đầy đủ (dữ liệu demo: 200) |
+| Độc giả | 2.400 | 1.800 | 1.800 | Tổng 6.000 khi hệ thống đầy đủ (dữ liệu mẫu: 200) |
 | Tỷ lệ độc giả bị khóa | 5% | 5% | 5% | Thẻ vi phạm, nợ lâu |
 | Cuốn sách | 6.000 | 4.500 | 4.500 | |
 | Phiếu mượn mỗi ngày | 120 | 90 | 90 | |
@@ -1164,16 +1188,16 @@ Mức trong suốt hướng tới: **trong suốt phân mảnh** – ứng dụn
 2. Thêm p2: tách phần "còn lại" thành CN02 và CN03, S2 chỉ truy nhập phần CN02 → liên đới. Pr' = {p1, p2}.
 3. Thêm p3: tương tự, S3 chỉ truy nhập phần CN03 → liên đới. Pr' = {p1, p2, p3}.
 4. Thêm p4: tách mỗi mảnh theo trạng thái. Xét mi = p1 ∧ p4 (CN01, khóa, 120 bộ) và mj = p1 ∧ ¬p4 (CN01, hoạt động, 2.280 bộ). UD1 truy nhập đều các bộ CN01 (9.000 lượt/tháng) nên phân cho mi 9.000 × 120/2.400 = 450 lượt và mj 8.550 lượt; UD2 thêm 4 lượt/tháng chỉ vào mi. acc(mi)/card(fi) = 454/120 ≈ 3,78 ≠ acc(mj)/card(fj) = 8.550/2.280 = 3,75 → có ứng dụng (UD2) truy nhập hai mảnh khác nhau → p4 liên đới. Pr' = {p1, p2, p3, p4}.
-5. Không còn vị từ; kiểm tra lại không vị từ nào trong Pr' mất tính liên đới → **Pr' đầy đủ và cực tiểu**.
+5. Không còn vị từ; kiểm tra lại không vị từ nào trong Pr' mất tính liên đới → Pr' đầy đủ và cực tiểu.
 
 *Ví dụ không cực tiểu:* nếu thêm p5: GioiTinh = 'M', p5 chia mỗi mảnh thành 2 phần nhưng không ứng dụng nào truy nhập hai phần này khác nhau (acc/card bằng nhau) → p5 không liên đới, Pr' ∪ {p5} không cực tiểu, nên loại p5.
 
 **Thuật toán PHORIZONTAL:**
 - Số vị từ hội sơ cấp lý thuyết: 2⁴ = 16 (mỗi pi ở dạng khẳng định hoặc phủ định).
 - Tập phép kéo theo I: p1 ⇒ ¬p2 ∧ ¬p3; p2 ⇒ ¬p1 ∧ ¬p3; p3 ⇒ ¬p1 ∧ ¬p2; ¬p1 ∧ ¬p2 ⇒ p3 (miền MaChiNhanh chỉ có 3 giá trị).
-- Loại các minterm mâu thuẫn với I (hai chi nhánh cùng lúc, hoặc không chi nhánh nào) → còn **6 minterm**:
+- Loại các minterm mâu thuẫn với I (hai chi nhánh cùng lúc, hoặc không chi nhánh nào) → còn 6 minterm:
 
-| Mảnh | Vị từ hội sơ cấp | Biểu thức | Số bộ giả định | Số bộ dữ liệu demo |
+| Mảnh | Vị từ hội sơ cấp | Biểu thức | Số bộ giả định | Số bộ trong dữ liệu mẫu |
 | --- | --- | --- | --- | --- |
 | DOC_GIA_1 | p1 ∧ ¬p4 | σ MaChiNhanh='CN01' ∧ TrangThai='HoatDong' (DOC_GIA) | 2.280 | 67 |
 | DOC_GIA_2 | p1 ∧ p4 | σ MaChiNhanh='CN01' ∧ TrangThai='Khoa' (DOC_GIA) | 120 | 0 |
@@ -1182,9 +1206,9 @@ Mức trong suốt hướng tới: **trong suốt phân mảnh** – ứng dụn
 | DOC_GIA_5 | p3 ∧ ¬p4 | σ MaChiNhanh='CN03' ∧ TrangThai='HoatDong' (DOC_GIA) | 1.710 | 66 |
 | DOC_GIA_6 | p3 ∧ p4 | σ MaChiNhanh='CN03' ∧ TrangThai='Khoa' (DOC_GIA) | 90 | 0 |
 
-Các mảnh "Khoa" rỗng trong dữ liệu demo (chưa có độc giả bị khóa), tương tự PROJ2, PROJ5 trong ví dụ của slide; chúng vẫn được giữ trong lược đồ vì ràng buộc nghiệp vụ cho phép phát sinh.
+Các mảnh "Khoa" rỗng trong dữ liệu mẫu (chưa có độc giả bị khóa), tương tự PROJ2, PROJ5 trong ví dụ của slide; chúng vẫn được giữ trong lược đồ vì ràng buộc nghiệp vụ cho phép phát sinh.
 
-Tương tự, **THU_THU, PHONG_KHO, PHONG_DOC** được phân mảnh ngang nguyên thủy theo vị từ MaChiNhanh = 'CN0k' (ứng dụng duy nhất là truy nhập theo chi nhánh) → mỗi quan hệ 3 mảnh.
+Tương tự, THU_THU, PHONG_KHO, PHONG_DOC được phân mảnh ngang nguyên thủy theo vị từ MaChiNhanh = 'CN0k' (ứng dụng duy nhất là truy nhập theo chi nhánh) → mỗi quan hệ 3 mảnh.
 
 ## 5.4 Phân mảnh ngang dẫn xuất
 
@@ -1203,9 +1227,9 @@ Tương tự, **THU_THU, PHONG_KHO, PHONG_DOC** được phân mảnh ngang nguy
 | NGUOI (thủ thư) | THU_THU | NGUOI_TT_k = NGUOI ⋉ THU_THU_k |
 
 Nhận xét:
-- Xảy ra **phân mảnh dây chuyền** giống ví dụ PAY → EMP → ASG trong slide: DOC_GIA → PHIEU_MUON → CT_MUON → PHIEU_PHAT và PHONG_KHO → GIA_SACH → CUON_SACH.
-- CT_MUON có hai owner có thể chọn (PHIEU_MUON và CUON_SACH). Nhóm chọn PHIEU_MUON vì (1) đặc tính kết nối tốt hơn: các truy vấn mượn/trả và báo cáo luôn kết nối CT_MUON với PHIEU_MUON và độc giả; (2) phục vụ nhiều ứng dụng hơn (mượn, trả, phạt, báo cáo 1, 2, 4). Theo số liệu, độc giả mượn sách tại chi nhánh mình đăng ký (dữ liệu demo: 0 lượt mượn khác chi nhánh), nên CT_MUON_k ⋈ CUON_SACH_k hoàn toàn cục bộ.
-- Nghiệp vụ vẫn **cho phép mượn liên chi nhánh** (CSDL không cấm). Khi đó dòng CT_MUON thuộc mảnh của chi nhánh độc giả (dẫn xuất theo PHIEU_MUON), còn cuốn sách nằm ở mảnh CUON_SACH của site khác: giao tác mượn/trả phải cập nhật hai site (trạng thái cuốn, số lượng trên giá) nên cần giao tác phân tán (cam kết hai pha); truy vấn ghép CT_MUON với CUON_SACH khi đó phải truy cập site xa. Vì tần suất thấp, nhóm chấp nhận chi phí này thay vì nhân bản CUON_SACH.
+- Xảy ra phân mảnh dây chuyền giống ví dụ PAY → EMP → ASG trong slide: DOC_GIA → PHIEU_MUON → CT_MUON → PHIEU_PHAT và PHONG_KHO → GIA_SACH → CUON_SACH.
+- CT_MUON có hai owner có thể chọn (PHIEU_MUON và CUON_SACH). Nhóm chọn PHIEU_MUON vì (1) đặc tính kết nối tốt hơn: các truy vấn mượn/trả và báo cáo luôn kết nối CT_MUON với PHIEU_MUON và độc giả; (2) phục vụ nhiều ứng dụng hơn (mượn, trả, phạt, báo cáo 1, 2, 4). Theo số liệu, độc giả mượn sách tại chi nhánh mình đăng ký (trong dữ liệu mẫu không có lượt mượn nào khác chi nhánh), nên CT_MUON_k ⋈ CUON_SACH_k hoàn toàn cục bộ.
+- Nghiệp vụ vẫn cho phép mượn liên chi nhánh (CSDL không cấm). Khi đó dòng CT_MUON thuộc mảnh của chi nhánh độc giả (dẫn xuất theo PHIEU_MUON), còn cuốn sách nằm ở mảnh CUON_SACH của site khác: giao tác mượn/trả phải cập nhật hai site (trạng thái cuốn, số lượng trên giá) nên cần giao tác phân tán (cam kết hai pha); truy vấn ghép CT_MUON với CUON_SACH khi đó phải truy cập site xa. Vì tần suất thấp, nhóm chấp nhận chi phí này thay vì nhân bản CUON_SACH.
 
 ## 5.5 Phân mảnh dọc và phân mảnh lai NGUOI (phần độc giả)
 
@@ -1237,7 +1261,7 @@ Ví dụ: aff(A1, A1) = q1 + q2 + q4 = 100 + 60 + 10 = 170; aff(A2, A3) = q3 + q
 
 1. Khởi tạo CA với cột A1, A2.
 2. Đặt A3: cont(A0, A3, A1) = 7.800; cont(A1, A3, A2) = 48.600; cont(A2, A3, A5) = 48.600 → chọn vị trí đầu tiên đạt max: giữa A1 và A2 → thứ tự A1, A3, A2.
-3. Đặt A4: cont(A0, A4, A1) = 27.600; cont(A1, A4, A3) = 21.000; cont(A3, A4, A2) = −46.200; cont(A2, A4, A5) = 1.200 → đặt A4 bên trái A1 → thứ tự **A4, A1, A3, A2**.
+3. Đặt A4: cont(A0, A4, A1) = 27.600; cont(A1, A4, A3) = 21.000; cont(A3, A4, A2) = −46.200; cont(A2, A4, A5) = 1.200 → đặt A4 bên trái A1 → thứ tự A4, A1, A3, A2.
 4. Sắp hàng theo thứ tự cột, được ma trận CA hai khối rõ rệt:
 
 |  | A4 | A1 | A3 | A2 |
@@ -1267,7 +1291,7 @@ Ví dụ: aff(A1, A1) = q1 + q2 + q4 = 100 + 60 + 10 = 170; aff(A2, A3) = q3 + q
 | Tái thiết | DOC_GIA = ∪ DOC_GIA_i | NGUOI_DG = A ⋈_MaNguoi B |
 | Tách biệt | Các minterm loại trừ nhau; mỗi phiếu thuộc đúng một độc giả nên mảnh dẫn xuất cũng rời nhau | A ∩ B = {MaNguoi} (chỉ chung khóa) |
 
-Kiểm chứng trên dữ liệu bằng `09_phan_tan.sql`: dùng EXCEPT (đầy đủ), so sánh số bộ của hợp các mảnh với quan hệ gốc (tái thiết), đếm khóa trùng giữa các mảnh (tách biệt) cho 12 quan hệ → **36/36 PASS**.
+Kiểm chứng trên dữ liệu bằng `09_phan_tan.sql`: dùng EXCEPT (đầy đủ), so sánh số bộ của hợp các mảnh với quan hệ gốc (tái thiết), đếm khóa trùng giữa các mảnh (tách biệt) cho 12 quan hệ; cả 36/36 ca kiểm tra đều đạt.
 
 ## 5.7 Cấp phát và nhân bản
 
@@ -1280,41 +1304,43 @@ Kiểm chứng trên dữ liệu bằng `09_phan_tan.sql`: dùng EXCEPT (đầy 
 | CUON_SACH_k | 1.200 tại site k, 60 từ site khác (tìm sách liên chi nhánh) | 250 tại site k | 60 | 250 × 2 = 500 | Không nhân bản, đặt tại site k |
 | SACH_THANH_LY, CT_MUON_LUU_TRU | Vài lượt/tháng | Vài lần/năm | Gần 0 | — | Một bản tại S1 |
 
-**Lược đồ cấp phát** (Rij = mảnh i đặt tại site j; số bộ theo dữ liệu demo):
+**Lược đồ cấp phát** (Rij = mảnh i đặt tại site j; số bộ theo dữ liệu mẫu):
 
-| Site | Mảnh cấp phát (không nhân bản) | Số bộ demo |
+| Site | Mảnh cấp phát (không nhân bản) | Số bộ trong dữ liệu mẫu |
 | --- | --- | --- |
 | S1 (CN01) | DOC_GIA_1, DOC_GIA_2; NGUOI_DG_A_1, NGUOI_DG_B_1; THE_1; PHIEU_MUON_1; CT_MUON_1; PHIEU_TRA_1; PHIEU_PHAT_1; THU_THU_1, NGUOI_TT_1; PHONG_KHO_1; GIA_SACH_1; CUON_SACH_1; PHONG_DOC_1; THUE_1; SACH_THANH_LY; CT_MUON_LUU_TRU | độc giả 67, phiếu mượn 272, chi tiết mượn 751, phiếu trả 531, phiếu phạt 111, cuốn 475, giá 9, thủ thư 5, phòng 7, lượt thuê 51 |
 | S2 (CN02) | Các mảnh k = 2 tương ứng | độc giả 67, phiếu mượn 281, chi tiết 737, phiếu trả 512, phạt 107, cuốn 434, giá 10, thủ thư 5, phòng 7, lượt thuê 51 |
 | S3 (CN03) | Các mảnh k = 3 tương ứng | độc giả 66, phiếu mượn 278, chi tiết 713, phiếu trả 525, phạt 97, cuốn 460, giá 8, thủ thư 5, phòng 7, lượt thuê 48 |
-| S1, S2, S3 | **Bản sao toàn phần:** CHI_NHANH, THE_LOAI, BANG_PHI_PHAT, LOAI_PHONG, DAU_SACH, TAC_GIA, DAU_SACH_TAC_GIA | 3, 6, 7, 2, 300, 28, 391 |
+| S1, S2, S3 | Bản sao toàn phần: CHI_NHANH, THE_LOAI, BANG_PHI_PHAT, LOAI_PHONG, DAU_SACH, TAC_GIA, DAU_SACH_TAC_GIA | 3, 6, 7, 2, 300, 28, 391 |
 
-Mô hình cấp phát tổng quát (chương 7c): biến quyết định x_ij = 1 nếu mảnh Fi đặt tại Sj; cực tiểu Tổng chi phí = Σ lưu trữ (USC_k · size(Fj) · x_jk) + Σ truy vấn (xử lý PC_i + truyền thông TC_i), với ràng buộc thời gian đáp ứng, dung lượng lưu trữ và năng lực xử lý từng site. Bài toán là NP-complete nên nhóm dùng heuristic: (1) bỏ qua nhân bản, đặt mỗi mảnh tại site truy cập nhiều nhất (site của chi nhánh); (2) xét nhân bản cho từng quan hệ theo bảng chi phí trên.
+Mô hình cấp phát tổng quát theo bài giảng: biến quyết định x_ij = 1 nếu mảnh Fi đặt tại Sj; cực tiểu Tổng chi phí = Σ lưu trữ (USC_k · size(Fj) · x_jk) + Σ truy vấn (xử lý PC_i + truyền thông TC_i), với ràng buộc thời gian đáp ứng, dung lượng lưu trữ và năng lực xử lý từng site. Bài toán là NP-complete nên nhóm dùng heuristic: (1) bỏ qua nhân bản, đặt mỗi mảnh tại site truy cập nhiều nhất (site của chi nhánh); (2) xét nhân bản cho từng quan hệ theo bảng chi phí trên.
 
 ## 5.8 Sơ đồ tổng thể hệ thống
 
 ![Hình 5.1. Sơ đồ tổng thể hệ CSDL phân tán của thư viện](../phan_tan/so_do_tong_the.png)
 
-ba site S1, S2, S3 nối qua WAN; mỗi site gồm DBMS cục bộ MariaDB, CSDL cục bộ chứa các mảnh của chi nhánh và bản sao danh mục; tầng trên là lược đồ toàn cục + lược đồ phân mảnh + lược đồ cấp phát; ứng dụng thủ thư ở mỗi chi nhánh truy cập qua lớp trong suốt phân tán.
+Hình 5.1 gồm ba site S1, S2, S3 nối với nhau qua WAN; mỗi site gồm DBMS cục bộ MariaDB, CSDL cục bộ chứa các mảnh của chi nhánh và bản sao danh mục; tầng trên là lược đồ toàn cục + lược đồ phân mảnh + lược đồ cấp phát; ứng dụng thủ thư ở mỗi chi nhánh truy cập qua lớp trong suốt phân tán.
 
-**Xử lý truy vấn phân tán (ví dụ):** báo cáo "độc giả trả muộn" toàn hệ thống = ∪_k γ_MaDocGia(PHIEU_PHAT_k ⋈ PHIEU_MUON_k): mỗi site tính cục bộ phần của mình rồi gửi kết quả gộp (vài chục bộ) về site yêu cầu, thay vì gửi toàn bộ bảng phạt. Truy vấn tìm sách liên chi nhánh dùng bán kết nối: gửi π_MaDauSach của kết quả tìm kiếm tới site khác, chỉ nhận về các cuốn khớp, giảm khối lượng truyền như mục đích của phép ⋉ ở chương 4.
+**Xử lý truy vấn phân tán (ví dụ):** báo cáo "độc giả trả muộn" toàn hệ thống = ∪_k γ_MaDocGia(PHIEU_PHAT_k ⋈ PHIEU_MUON_k): mỗi site tính cục bộ phần của mình rồi gửi kết quả gộp (vài chục bộ) về site yêu cầu, thay vì gửi toàn bộ bảng phạt. Truy vấn tìm sách liên chi nhánh dùng bán kết nối: gửi π_MaDauSach của kết quả tìm kiếm tới site khác, chỉ nhận về các cuốn khớp, giảm khối lượng truyền đúng với mục đích của phép bán kết nối ⋉ trong đại số quan hệ.
 
 ## 5.9 Minh họa cài đặt trên MariaDB
 
-`btl/sql/09_phan_tan.sql` (sinh bởi `btl/phan_tan/gen_phantan.py`) tạo 3 database `QLTV_CN01..03` trên cùng một máy chủ để mô phỏng 3 site, dùng `CREATE TABLE … AS SELECT … WHERE` (phép chọn), `… WHERE MaX IN (SELECT …)` (bán kết nối) và chọn cột (phép chiếu) để tạo mảnh; tạo view `pt_*` bằng UNION ALL / JOIN để tái thiết; bảng KIEM_TRA_PHAN_TAN ghi kết quả kiểm tra 3 quy tắc. Trên hệ thống thật, mỗi database đặt trên một máy chủ riêng và các view tái thiết dùng engine CONNECT/FederatedX hoặc lớp ứng dụng để truy cập site xa.
+Script `09_phan_tan.sql` (sinh bởi `gen_phantan.py`) tạo 3 database `QLTV_CN01..03` trên cùng một máy chủ để mô phỏng 3 site, dùng `CREATE TABLE … AS SELECT … WHERE` (phép chọn), `… WHERE MaX IN (SELECT …)` (bán kết nối) và chọn cột (phép chiếu) để tạo mảnh; tạo view `pt_*` bằng UNION ALL / JOIN để tái thiết; bảng KIEM_TRA_PHAN_TAN ghi kết quả kiểm tra 3 quy tắc. Trên hệ thống thật, mỗi database đặt trên một máy chủ riêng và các view tái thiết dùng engine CONNECT/FederatedX hoặc lớp ứng dụng để truy cập site xa.
 
 # KẾT LUẬN
 
-Nhóm đã xây dựng hoàn chỉnh hệ CSDL quản lý thư viện theo kịch bản được giao:
+Qua bài tập lớn này, nhóm đã đi qua đủ các bước thiết kế một hệ cơ sở dữ liệu, từ phân tích yêu cầu đến cài đặt và kiểm thử. Những kết quả chính nhóm đạt được:
 
-- Lược đồ E-R có đủ các loại tập thực thể (mạnh, yếu, ISA), thuộc tính (đơn, kép, đa trị, dẫn xuất, rỗng) và liên kết (1:1, 1:N, N:N, đệ quy, 3 ngôi, xác định, kết hợp, ràng buộc min-max).
-- 23 lược đồ quan hệ ở dạng chuẩn BCNF, có phụ thuộc hàm, khóa, quá trình chuẩn hóa minh họa, sơ đồ khóa chính – khóa ngoại và từ điển dữ liệu.
-- Cài đặt trên MariaDB với 23 khóa chính, 34 khóa ngoại, 11 UNIQUE, 44 CHECK; 8 trigger, 7 transaction, 8 function và các procedure thêm/xóa/sửa/tìm kiếm cho mọi đối tượng.
-- Dữ liệu vận hành 3 tháng ở 3 chi nhánh (300 đầu sách, 1.623 cuốn, 200 độc giả, 831 phiếu mượn, 2.217 lượt mượn); 6 truy vấn hiển thị theo đúng yêu cầu sắp xếp của đề; chỉ mục, phân quyền và 47 ca kiểm thử tự động đều đạt.
-- Giao diện có đủ thêm/xóa/sửa/tìm kiếm cho các đối tượng chính, 23 thao tác được kiểm thử tự động bằng trình duyệt đều cho kết quả đúng kỳ vọng.
-- Thiết kế phân tán cho 3 site: phân mảnh ngang nguyên thủy (COM_MIN, PHORIZONTAL), dẫn xuất, dọc (BEA), lai; cấp phát, nhân bản; minh họa cài đặt và kiểm chứng 3 quy tắc phân mảnh (36/36 đạt).
+- Lược đồ E-R có đủ các loại tập thực thể, thuộc tính và liên kết mà đề yêu cầu, gồm cả thực thể yếu, cụ thể hóa ISA, liên kết đệ quy, liên kết 3 ngôi và kết hợp.
+- 23 lược đồ quan hệ đều ở dạng chuẩn BCNF, kèm phụ thuộc hàm, khóa, ví dụ chuẩn hóa từng bước, sơ đồ khóa chính – khóa ngoại và từ điển dữ liệu.
+- CSDL cài trên MariaDB với 23 khóa chính, 34 khóa ngoại, 11 ràng buộc UNIQUE, 44 ràng buộc CHECK, 8 trigger, 7 transaction và 8 function; tuổi thọ sách được cập nhật hằng ngày bằng event của MariaDB.
+- Dữ liệu mô phỏng ba tháng hoạt động ở ba chi nhánh (300 đầu sách, 1.623 cuốn, 200 độc giả, 831 phiếu mượn, 2.217 lượt mượn); sáu truy vấn hiển thị sắp xếp đúng như đề yêu cầu.
+- 52 ca kiểm thử nghiệp vụ và 23 thao tác trên giao diện đều cho kết quả đúng như mong đợi.
+- Thiết kế phân tán cho ba site gồm phân mảnh ngang nguyên thủy (COM_MIN, PHORIZONTAL), phân mảnh dẫn xuất, phân mảnh dọc (BEA), phân mảnh lai, cấp phát và nhân bản; ba quy tắc phân mảnh được kiểm chứng trên dữ liệu (36/36 ca đạt).
 
-Hướng phát triển: triển khai các site trên máy chủ thật với nhân bản MariaDB (replication) cho các bảng danh mục, bổ sung đặt trước sách và thông báo hạn trả tự động qua email.
+Bên cạnh đó, bài làm vẫn còn một số hạn chế. Phần phân tán mới được minh họa bằng ba database trên cùng một máy chủ, chưa chạy trên ba máy riêng. Nghiệp vụ hiện cho phép mượn sách ở chi nhánh khác nhưng chưa có giao tác phân tán cho trường hợp này. Giao diện còn đơn giản, chủ yếu phục vụ công việc của thủ thư.
+
+Thời gian tới, nhóm dự định triển khai ba site trên ba máy chủ thật, dùng cơ chế nhân bản (replication) của MariaDB cho các bảng danh mục, đồng thời bổ sung chức năng đặt trước sách và gửi email nhắc hạn trả cho độc giả.
 
 # PHỤ LỤC A. MÃ NGUỒN SQL
 
@@ -2016,6 +2042,27 @@ CREATE OR REPLACE PROCEDURE sp_ThuePhong_BaoGia(IN p_MaPhongDoc VARCHAR(8), IN p
   FROM PHONG_DOC p JOIN LOAI_PHONG l ON l.MaLoaiPhong = p.MaLoaiPhong
   WHERE p.MaPhongDoc = p_MaPhongDoc //
 
+-- ---------------------------------------------------------------------
+-- Tuổi thọ giảm theo thời gian (đề: sách truyện 15 năm, tham khảo 10 năm…)
+-- Tuổi thọ còn lại tại ngày p_Ngay = tuổi thọ thể loại (tháng) − số tháng kể từ ngày nhập − số lần đã mượn.
+-- Chỉ cho giảm (LEAST) nên không xóa điều chỉnh tay và không đụng phần TRG5 đã trừ khi mượn;
+-- cuốn trên giá về 0 được TRG6 tự chuyển 'ChoThanhLy'. Event ev_CapNhatTuoiTho gọi mỗi ngày.
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE sp_CapNhatTuoiTho(IN p_Ngay DATE, OUT p_SoCuon INT)
+BEGIN
+  UPDATE CUON_SACH cs
+    JOIN DAU_SACH ds ON ds.MaDauSach = cs.MaDauSach
+    JOIN THE_LOAI tl ON tl.MaTheLoai = ds.MaTheLoai
+  SET cs.TuoiThoConLaiThang = LEAST(cs.TuoiThoConLaiThang,
+        GREATEST(tl.TuoiThoNam * 12 - TIMESTAMPDIFF(MONTH, cs.NgayNhap, COALESCE(p_Ngay, CURDATE()))
+                 - (SELECT COUNT(*) FROM CT_MUON m WHERE m.MaCuonSach = cs.MaCuonSach), 0));
+  SET p_SoCuon = ROW_COUNT();
+END //
+
+CREATE OR REPLACE EVENT ev_CapNhatTuoiTho
+  ON SCHEDULE EVERY 1 DAY STARTS (CURRENT_DATE + INTERVAL 1 DAY + INTERVAL 5 MINUTE)
+  DO CALL sp_CapNhatTuoiTho(CURDATE(), @so_cuon) //
+
 DELIMITER ;
 ```
 
@@ -2311,7 +2358,7 @@ BEGIN
     -- Khóa dòng độc giả (tuần tự hóa các giao dịch mượn của cùng độc giả → đếm 50 cuốn chính xác)
     -- và khóa các cuốn sách (hai thủ thư không cho mượn trùng một cuốn)
     SELECT MaNguoi INTO @v_khoa FROM DOC_GIA WHERE MaNguoi = p_MaDocGia FOR UPDATE;
-    SELECT COUNT(*) INTO v_SoKhoa
+    SELECT COUNT(DISTINCT cs.MaCuonSach) INTO v_SoKhoa   -- DISTINCT: danh sách có mã lặp cũng bị chặn (E104)
     FROM CUON_SACH cs JOIN JSON_TABLE(p_DsCuon, '$[*]' COLUMNS (Ma VARCHAR(10) CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci PATH '$')) j
          ON j.Ma = cs.MaCuonSach
     WHERE cs.TrangThai = 'TrenGia'
@@ -2550,7 +2597,7 @@ DELIMITER ;
 -- 06_view_baocao.sql – 6 truy vấn hiển thị bắt buộc của đề
 -- Mỗi yêu cầu có một VIEW (dùng lại được, không sắp xếp) và một procedure
 -- sp_BC_* lọc theo chi nhánh (NULL = tất cả) và sắp xếp đúng yêu cầu.
--- Tham số p_Ngay / p_ThoiDiem cho phép xem báo cáo tại một ngày bất kỳ (demo với dữ liệu quá khứ).
+-- Tham số p_Ngay / p_ThoiDiem cho phép xem báo cáo tại một ngày bất kỳ, kể cả ngày trong quá khứ.
 -- =====================================================================
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE QLTV;

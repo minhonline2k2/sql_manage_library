@@ -4,7 +4,7 @@
 --   'OK' = lệnh phải thành công; 'Exxx' = phải bị chặn với mã lỗi đó;
 --   'CK' = phải bị chặn bởi một ràng buộc CHECK.
 -- Ca kiểm tra giá trị chạy một câu SELECT trả 1 giá trị và so với kỳ vọng.
--- Kết quả ghi vào bảng KET_QUA_KIEM_THU (PASS/FAIL). Script làm thay đổi dữ liệu → chạy trên bản demo.
+-- Kết quả ghi vào bảng KET_QUA_KIEM_THU (PASS/FAIL). Script làm thay đổi dữ liệu, chạy xong cần dựng lại CSDL.
 -- =====================================================================
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE QLTV;
@@ -88,6 +88,8 @@ CALL sp_KT_Lenh('TRG2-a', 'Mượn cuốn đang được người khác mượn'
 CALL sp_KT_Lenh('TRG2-b', 'Độc giả DG0001 đang giữ 50 cuốn mượn thêm 1 cuốn',
   CONCAT('CALL sp_MuonSach(''DG0001'', ''TT002'', JSON_ARRAY((SELECT cs.MaCuonSach FROM CUON_SACH cs JOIN GIA_SACH g ON g.MaGia=cs.MaGia ',
          'WHERE g.MaPhongKho LIKE ''CN01%'' AND cs.TrangThai=''TrenGia'' LIMIT 1)), ''2026-09-20'', @x)'), 'E102');
+CALL sp_KT_Lenh('TX1-e', 'Danh sách mượn có mã cuốn bị lặp',
+  CONCAT('CALL sp_MuonSach(', QUOTE(@dg2), ', ', QUOTE(@tt), ', JSON_ARRAY(', QUOTE(@c11), ', ', QUOTE(@c11), '), ', QUOTE(@d), ', @x)'), 'E104');
 
 -- ===== TX2 + TRG3, TRG4 ===================================================
 CALL sp_KT_Lenh('TX2-a', 'Trả cuốn mà độc giả không mượn',
@@ -116,6 +118,10 @@ CALL sp_KT_Lenh('TX3-b', 'Thanh toán khi không còn khoản nợ', CONCAT('CAL
 CALL sp_KT_Lenh('TX7-b', 'Thuê phòng nhóm 2 giờ hợp lệ',
   CONCAT('CALL sp_ThuePhong(', QUOTE(@dg), ', ''CN02-N1'', ', QUOTE(@tt), ', ''2026-10-08 09:00'', ''2026-10-08 11:00'', 4, ', QUOTE(@d), ', @t, @tien)'), 'OK');
 CALL sp_KT_GiaTri('TX7-c', 'Tiền thuê = 2 giờ × 50.000đ', 'SELECT TongTien FROM PHIEU_THUE_PHONG WHERE MaPhieuThue = @t', '100000');
+CALL sp_KT_GiaTri('BG-1', 'Báo giá phòng hội thảo 3 giờ = 3 × 300.000đ',
+  'SELECT fn_TienThuePhong(''CN02-H1'', ''2026-10-20 09:00'', ''2026-10-20 12:00'')', '900000');
+CALL sp_KT_GiaTri('BG-2', 'Mọi lượt thuê đã lưu có tiền khớp công thức báo giá',
+  'SELECT COUNT(*) FROM PHIEU_THUE_PHONG WHERE TongTien <> fn_TienThuePhong(MaPhongDoc, BatDau, KetThuc)', '0');
 CALL sp_KT_Lenh('TRG7', 'Thuê trùng khung giờ 10:00–12:00',
   CONCAT('CALL sp_ThuePhong(', QUOTE(@dg2), ', ''CN02-N1'', ', QUOTE(@tt), ', ''2026-10-08 10:00'', ''2026-10-08 12:00'', 4, ', QUOTE(@d), ', @t2, @tien2)'), 'E201');
 CALL sp_KT_Lenh('TX7-d', 'Số người vượt sức chứa',
@@ -163,6 +169,15 @@ CALL sp_KT_GiaTri('TRG6-c', 'Cuốn trên giá hết tuổi thọ tự chuyển 
 CALL sp_KT_Lenh('TX5-a', 'Thanh lý sách hết niên hạn', 'CALL sp_ThanhLySach(''2026-10-05'', @sotl)', 'OK');
 CALL sp_KT_GiaTri('TX5-b', 'Cuốn đã chuyển sang SACH_THANH_LY và rời khỏi CUON_SACH',
   'SELECT CONCAT((SELECT COUNT(*) FROM SACH_THANH_LY WHERE MaCuonSach=''TR0901-003''), (SELECT COUNT(*) FROM CUON_SACH WHERE MaCuonSach=''TR0901-003''))', '10');
+
+-- ===== Tuổi thọ giảm theo thời gian (sp_CapNhatTuoiTho, event chạy hằng ngày) ==========
+-- TR0901-001 nhập ngày 2026-10-05, truyện 15 năm = 180 tháng, chưa được mượn lần nào
+CALL sp_CapNhatTuoiTho('2026-12-05', @n_tt);
+CALL sp_KT_GiaTri('TT-1', 'Hai tháng sau ngày nhập, tuổi thọ còn 180 − 2 = 178 tháng',
+  'SELECT TuoiThoConLaiThang FROM CUON_SACH WHERE MaCuonSach = ''TR0901-001''', '178');
+CALL sp_CapNhatTuoiTho('2026-11-05', @n_tt);
+CALL sp_KT_GiaTri('TT-2', 'Chạy lại với ngày sớm hơn không làm tuổi thọ tăng lên',
+  'SELECT TuoiThoConLaiThang FROM CUON_SACH WHERE MaCuonSach = ''TR0901-001''', '178');
 
 -- ===== Toàn vẹn tổng thể =================================================
 CALL sp_KT_GiaTri('TV-1', 'SoLuongHienCo của mọi giá khớp số cuốn không đang mượn',

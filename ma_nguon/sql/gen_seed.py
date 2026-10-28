@@ -288,5 +288,7 @@ for i in range((D1 - D0).days + 1):
         dem["thue"] += 1
 
 w(f"\n-- Thống kê mô phỏng: {json.dumps(dem)}")
+w("-- Đưa tuổi thọ sách về đúng ngày dựng CSDL (sau đó event ev_CapNhatTuoiTho cập nhật mỗi ngày)")
+w("CALL sp_CapNhatTuoiTho(CURDATE(), @so_cuon);")
 sys.stdout.write("\n".join(out) + "\n")
 print(json.dumps(dem), file=sys.stderr)

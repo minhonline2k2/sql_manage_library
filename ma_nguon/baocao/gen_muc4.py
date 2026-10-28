@@ -30,17 +30,17 @@ chi_so = [
  ("Số lượt mượn (cuốn)", q("SELECT (SELECT COUNT(*) FROM CT_MUON)+(SELECT COUNT(*) FROM CT_MUON_LUU_TRU)")[0][0]),
  ("Số cuốn đang được mượn ngày 30/09/2026", q("SELECT COUNT(*) FROM CT_MUON WHERE MaPhieuTra IS NULL")[0][0]),
  ("Số cuốn quá hạn ngày 30/09/2026", q("SELECT COUNT(*) FROM CT_MUON WHERE MaPhieuTra IS NULL AND HanTra < '2026-09-30'")[0][0]),
- ("Số phiếu phạt / tổng tiền phạt (đ)", "%s / %s" % q("SELECT COUNT(*), FORMAT(SUM(SoTien),0) FROM PHIEU_PHAT")[0]),
- ("Số cuốn sắp hết hạn sử dụng (< 24 tháng)", q("SELECT COUNT(*) FROM CUON_SACH WHERE TuoiThoConLaiThang < 24")[0][0]),
+ ("Số phiếu phạt / tổng tiền phạt (đ)", "%s / %s" % q("SELECT COUNT(*), FORMAT(SUM(SoTien),0,'de_DE') FROM PHIEU_PHAT")[0]),
+ ("Số cuốn sắp hết hạn sử dụng (còn dưới 24 tháng, tính đến ngày dựng CSDL)", q("SELECT COUNT(*) FROM CUON_SACH WHERE TuoiThoConLaiThang < 24")[0][0]),
  ("Số cuốn đã thanh lý", q("SELECT COUNT(*) FROM SACH_THANH_LY")[0][0]),
  ("Độc giả giữ nhiều sách nhất", "%s (%s cuốn)" % q("SELECT MaNguoi, fn_SoSachDangMuon(MaNguoi) s FROM DOC_GIA ORDER BY s DESC LIMIT 1")[0]),
- ("Lượt thuê phòng / doanh thu (đ)", "%s / %s" % q("SELECT COUNT(*), FORMAT(SUM(TongTien),0) FROM PHIEU_THUE_PHONG")[0]),
+ ("Lượt thuê phòng / doanh thu (đ)", "%s / %s" % q("SELECT COUNT(*), FORMAT(SUM(TongTien),0,'de_DE') FROM PHIEU_THUE_PHONG")[0]),
 ]
 bang(["Chỉ số", "Giá trị"], chi_so)
 w("Dữ liệu mẫu (5 dòng đầu) của một số bảng chính:\n")
 for t, sql in [("DAU_SACH", "SELECT MaDauSach, MaTheLoai, TenSach, NhaXuatBan, NamXuatBan FROM DAU_SACH ORDER BY MaDauSach LIMIT 5"),
                ("CUON_SACH", "SELECT MaCuonSach, STT, MaGia, NgayNhap, TuoiThoConLaiThang, TrangThai FROM CUON_SACH ORDER BY MaCuonSach LIMIT 5"),
-               ("NGUOI / DOC_GIA", "SELECT d.MaNguoi, CONCAT_WS(' ',n.Ho,n.Dem,n.Ten), n.NgaySinh, n.Quan, d.MaChiNhanh, t.SoThe, t.NgayHetHan FROM DOC_GIA d JOIN NGUOI n ON n.MaNguoi=d.MaNguoi JOIN THE_DOC_GIA t ON t.MaDocGia=d.MaNguoi ORDER BY d.MaNguoi LIMIT 5"),
+               ("NGUOI / DOC_GIA", "SELECT d.MaNguoi, CONCAT_WS(' ',n.Ho,n.Dem,n.Ten) AS HoTen, n.NgaySinh, n.Quan, d.MaChiNhanh, t.SoThe, t.NgayHetHan FROM DOC_GIA d JOIN NGUOI n ON n.MaNguoi=d.MaNguoi JOIN THE_DOC_GIA t ON t.MaDocGia=d.MaNguoi ORDER BY d.MaNguoi LIMIT 5"),
                ("PHIEU_MUON + CT_MUON", "SELECT pm.MaPhieuMuon, pm.MaDocGia, pm.MaThuThu, pm.NgayMuon, ct.MaCuonSach, ct.HanTra, ct.MaPhieuTra FROM PHIEU_MUON pm JOIN CT_MUON ct ON ct.MaPhieuMuon=pm.MaPhieuMuon ORDER BY pm.MaPhieuMuon LIMIT 5"),
                ("PHIEU_PHAT", "SELECT MaPhieuPhat, MaPhieuMuon, MaCuonSach, SoNgayTre, SoTien, DaThanhToan, NgayThanhToan FROM PHIEU_PHAT ORDER BY MaPhieuPhat LIMIT 5"),
                ("PHIEU_THUE_PHONG", "SELECT MaPhieuThue, MaDocGia, MaPhongDoc, BatDau, KetThuc, SoNguoi, TongTien FROM PHIEU_THUE_PHONG ORDER BY MaPhieuThue LIMIT 5")]:
@@ -84,10 +84,14 @@ r = cur.fetchall()
 fn = [x[1] for x in r if x[0] == "FUNCTION"]; sp = [x[1] for x in r if x[0] == "PROCEDURE"]
 nhom = {"Transaction nghiệp vụ (TX1–TX7)": [p for p in sp if p in ("sp_MuonSach", "sp_TraSach", "sp_ThanhToanPhat", "sp_NhapLoSach", "sp_ThanhLySach", "sp_DangKyDocGia", "sp_ThuePhong")],
         "Báo cáo": [p for p in sp if p.startswith("sp_BC_")]}
-nhom["Thêm / xóa / sửa / tìm kiếm"] = [p for p in sp if p not in sum(nhom.values(), [])]
+nhom["Cập nhật định kỳ"] = [p for p in sp if p == "sp_CapNhatTuoiTho"]
+nhom["Thêm / xóa / sửa / tìm kiếm, báo giá"] = [p for p in sp if p not in sum(nhom.values(), [])]
 w(f"{len(fn)} function: " + ", ".join(f"`{x}`" for x in fn) + ".\n")
 for k, v in nhom.items():
     w(f"- **{k}** ({len(v)}): " + ", ".join(f"`{x}`" for x in v))
+ev = q("SELECT EVENT_NAME, INTERVAL_VALUE, INTERVAL_FIELD FROM information_schema.EVENTS WHERE EVENT_SCHEMA='QLTV' ORDER BY 1")
+chu_ky = lambda gt, don_vi: ("mỗi ngày" if str(gt) == "1" else f"mỗi {gt} ngày") if don_vi == "DAY" else f"mỗi {gt} {don_vi.lower()}"
+w(f"- **Event** ({len(ev)}): " + ", ".join(f"`{e[0]}` (chạy {chu_ky(e[1], e[2])}, gọi sp_CapNhatTuoiTho)" for e in ev))
 w("")
 
 # Kết quả kiểm thử: chạy 08_test.sql (làm thay đổi dữ liệu, nên để cuối)
@@ -95,8 +99,8 @@ cn.close()
 out = subprocess.run("mariadb --default-character-set=utf8mb4 -uroot QLTV < ../sql/08_test.sql", shell=True, capture_output=True, text=True).stdout
 cn = pymysql.connect(unix_socket="/run/mysqld/mysqld.sock", user="root", database="QLTV", charset="utf8mb4"); cur = cn.cursor()
 w("### 4.9 Kết quả kiểm thử tự động (08_test.sql)\n")
-rows = q("SELECT MaCa, MoTa, KyVong, ThucTe, KetQua FROM KET_QUA_KIEM_THU ORDER BY STT")
+rows = q("SELECT MaCa, MoTa, KyVong, ThucTe, IF(KetQua='PASS', 'Đạt', 'Không đạt') FROM KET_QUA_KIEM_THU ORDER BY STT")
 tong = q("SELECT SUM(KetQua='PASS'), COUNT(*) FROM KET_QUA_KIEM_THU")[0]
-w(f"Kết quả: **{tong[0]}/{tong[1]} ca PASS**.\n")
+w(f"Kết quả: {tong[0]}/{tong[1]} ca đạt.\n")
 bang(["Mã ca", "Mô tả", "Kỳ vọng", "Thực tế", "Kết quả"], rows)
 sys.stdout.write("\n".join(o) + "\n")

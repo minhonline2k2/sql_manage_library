@@ -38,7 +38,7 @@ BEGIN
     -- Khóa dòng độc giả (tuần tự hóa các giao dịch mượn của cùng độc giả → đếm 50 cuốn chính xác)
     -- và khóa các cuốn sách (hai thủ thư không cho mượn trùng một cuốn)
     SELECT MaNguoi INTO @v_khoa FROM DOC_GIA WHERE MaNguoi = p_MaDocGia FOR UPDATE;
-    SELECT COUNT(*) INTO v_SoKhoa
+    SELECT COUNT(DISTINCT cs.MaCuonSach) INTO v_SoKhoa   -- DISTINCT: danh sách có mã lặp cũng bị chặn (E104)
     FROM CUON_SACH cs JOIN JSON_TABLE(p_DsCuon, '$[*]' COLUMNS (Ma VARCHAR(10) CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci PATH '$')) j
          ON j.Ma = cs.MaCuonSach
     WHERE cs.TrangThai = 'TrenGia'

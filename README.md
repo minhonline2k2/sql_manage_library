@@ -2,14 +2,14 @@
 
 CSDL quản lý thư viện 3 chi nhánh trên **MariaDB 10.11**: 23 bảng, 18 trigger, 7 transaction (procedure), dữ liệu vận hành 3 tháng (01/07–30/09/2026), thiết kế CSDL phân tán 3 site, giao diện Streamlit chỉ gọi procedure/view.
 
-Kết quả kiểm thử: SQL **47/47**, phân tán **36/36**, giao diện **23/23**.
+Kết quả kiểm thử: SQL **52/52**, phân tán **36/36**, giao diện **23/23**.
 
 ## Cấu trúc
 
 ```
 tai_lieu/     đề bài, báo cáo Word (BaoCao_BTL_QLTV.docx), nội dung các chương P1–P8, phân công
 ma_nguon/
-  sql/        01_schema … 07_index_baomat (dựng CSDL), 08_test (47 ca), 09_phan_tan (3 site, 36 ca)
+  sql/        01_schema … 07_index_baomat (dựng CSDL), 08_test (52 ca), 09_phan_tan (3 site, 36 ca)
   app/        giao diện Streamlit (app.py, db.py) + kiểm thử Playwright (chup_man_hinh.py)
   baocao/     script ghép báo cáo Markdown → Word
   erd/, phan_tan/, anh/   sơ đồ ERD, thiết kế phân tán, ảnh chụp giao diện
@@ -77,7 +77,7 @@ Các lệnh dưới đây chạy được cả trong PowerShell, cmd và bash (�
 
 | Việc | Lệnh |
 | --- | --- |
-| Kiểm thử SQL (47 ca, làm thay đổi dữ liệu) | `docker compose exec -T db sh -c "mariadb --default-character-set=utf8mb4 -uroot -proot QLTV < /sql/08_test.sql"` |
+| Kiểm thử SQL (52 ca, làm thay đổi dữ liệu) | `docker compose exec -T db sh -c "mariadb --default-character-set=utf8mb4 -uroot -proot QLTV < /sql/08_test.sql"` |
 | Kiểm thử phân tán (36 ca) | `docker compose exec -T db sh -c "mariadb --default-character-set=utf8mb4 -uroot -proot < /sql/09_phan_tan.sql"` |
 | Dựng lại CSDL sạch | `docker compose exec -T db bash /docker-entrypoint-initdb.d/khoi_tao_csdl.sh` |
 | Mở MariaDB dòng lệnh | `docker compose exec db mariadb -uroot -proot QLTV` |
@@ -104,7 +104,7 @@ Kiểm thử và dựng lại báo cáo (các script kết nối root qua socket
 
 ```bash
 cd ~/qltv/ma_nguon/sql
-sudo mariadb --default-character-set=utf8mb4 QLTV < 08_test.sql | tail -2     # 47 PASS
+sudo mariadb --default-character-set=utf8mb4 QLTV < 08_test.sql | tail -2     # 52 PASS
 sudo sh build_all.sh && sudo mariadb --default-character-set=utf8mb4 < 09_phan_tan.sql > /dev/null
 sudo mariadb QLTV -e "SELECT KetQua, COUNT(*) FROM KIEM_TRA_PHAN_TAN GROUP BY KetQua"   # 36 PASS
 

@@ -2,7 +2,7 @@
 -- 06_view_baocao.sql – 6 truy vấn hiển thị bắt buộc của đề
 -- Mỗi yêu cầu có một VIEW (dùng lại được, không sắp xếp) và một procedure
 -- sp_BC_* lọc theo chi nhánh (NULL = tất cả) và sắp xếp đúng yêu cầu.
--- Tham số p_Ngay / p_ThoiDiem cho phép xem báo cáo tại một ngày bất kỳ (demo với dữ liệu quá khứ).
+-- Tham số p_Ngay / p_ThoiDiem cho phép xem báo cáo tại một ngày bất kỳ, kể cả ngày trong quá khứ.
 -- =====================================================================
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE QLTV;

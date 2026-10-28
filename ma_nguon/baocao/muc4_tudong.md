@@ -35,11 +35,11 @@ Một số chỉ số vận hành trong 3 tháng:
 | Số lượt mượn (cuốn) | 2217 |
 | Số cuốn đang được mượn ngày 30/09/2026 | 452 |
 | Số cuốn quá hạn ngày 30/09/2026 | 205 |
-| Số phiếu phạt / tổng tiền phạt (đ) | 315 / 111,849,000 |
-| Số cuốn sắp hết hạn sử dụng (< 24 tháng) | 141 |
+| Số phiếu phạt / tổng tiền phạt (đ) | 315 / 111.849.000 |
+| Số cuốn sắp hết hạn sử dụng (còn dưới 24 tháng, tính đến ngày dựng CSDL) | 160 |
 | Số cuốn đã thanh lý | 254 |
 | Độc giả giữ nhiều sách nhất | DG0001 (50 cuốn) |
-| Lượt thuê phòng / doanh thu (đ) | 150 / 65,000,000 |
+| Lượt thuê phòng / doanh thu (đ) | 150 / 65.000.000 |
 
 Dữ liệu mẫu (5 dòng đầu) của một số bảng chính:
 
@@ -57,15 +57,15 @@ Dữ liệu mẫu (5 dòng đầu) của một số bảng chính:
 
 | MaCuonSach | STT | MaGia | NgayNhap | TuoiThoConLaiThang | TrangThai |
 | --- | --- | --- | --- | --- | --- |
-| GT0001-001 | 1 | CN01-K1-GT1 | 2024-04-21 | 67 | DangMuon |
-| GT0001-002 | 2 | CN01-K1-GT1 | 2024-04-21 | 67 | DangMuon |
-| GT0001-003 | 3 | CN02-K1-GT1 | 2023-11-20 | 62 | DangMuon |
-| GT0001-004 | 4 | CN02-K1-GT1 | 2023-11-20 | 63 | DangMuon |
-| GT0001-005 | 5 | CN03-K1-GT1 | 2021-11-23 | 39 | DangMuon |
+| GT0001-001 | 1 | CN01-K1-GT1 | 2024-04-21 | 63 | DangMuon |
+| GT0001-002 | 2 | CN01-K1-GT1 | 2024-04-21 | 63 | DangMuon |
+| GT0001-003 | 3 | CN02-K1-GT1 | 2023-11-20 | 58 | DangMuon |
+| GT0001-004 | 4 | CN02-K1-GT1 | 2023-11-20 | 59 | DangMuon |
+| GT0001-005 | 5 | CN03-K1-GT1 | 2021-11-23 | 35 | DangMuon |
 
 **NGUOI / DOC_GIA**
 
-| MaNguoi | CONCAT_WS(' ',n.Ho,n.Dem,n.Ten) | NgaySinh | Quan | MaChiNhanh | SoThe | NgayHetHan |
+| MaNguoi | HoTen | NgaySinh | Quan | MaChiNhanh | SoThe | NgayHetHan |
 | --- | --- | --- | --- | --- | --- | --- |
 | DG0001 | Võ Hồng Hà | 2008-10-14 | Nam Từ Liêm | CN01 | THE0001 | 2027-06-01 |
 | DG0002 | Nguyễn Thu Giang | 1965-07-15 | Hà Đông | CN02 | THE0002 | 2027-09-03 |
@@ -251,59 +251,66 @@ Tổng cộng: 23 khóa chính, 34 khóa ngoại, 11 ràng buộc UNIQUE, 44 rà
 
 - **Transaction nghiệp vụ (TX1–TX7)** (7): `sp_DangKyDocGia`, `sp_MuonSach`, `sp_NhapLoSach`, `sp_ThanhLySach`, `sp_ThanhToanPhat`, `sp_ThuePhong`, `sp_TraSach`
 - **Báo cáo** (7): `sp_BC_DauSachLuotMuon`, `sp_BC_DocGiaTraMuon`, `sp_BC_PhongTaiThoiDiem`, `sp_BC_SachDaMuon`, `sp_BC_SachDangMuon`, `sp_BC_SachQuaHan`, `sp_BC_SachSapHetHan`
-- **Thêm / xóa / sửa / tìm kiếm** (32): `sp_ChiNhanh_Sua`, `sp_ChiNhanh_Them`, `sp_ChiNhanh_TimKiem`, `sp_ChiNhanh_Xoa`, `sp_CuonSach_ChuyenGia`, `sp_CuonSach_TimKiem`, `sp_CuonSach_Xoa`, `sp_DauSach_Sua`, `sp_DauSach_Them`, `sp_DauSach_TimKiem`, `sp_DauSach_Xoa`, `sp_DocGia_GiaHanThe`, `sp_DocGia_Sua`, `sp_DocGia_TimKiem`, `sp_DocGia_Xoa`, `sp_GiaSach_Sua`, `sp_GiaSach_Them`, `sp_GiaSach_TimKiem`, `sp_GiaSach_Xoa`, `sp_PhongDoc_Sua`, `sp_PhongDoc_Them`, `sp_PhongDoc_TimKiem`, `sp_PhongDoc_Xoa`, `sp_PhongKho_Sua`, `sp_PhongKho_Them`, `sp_PhongKho_TimKiem`, `sp_PhongKho_Xoa`, `sp_ThuePhong_BaoGia`, `sp_ThuThu_Sua`, `sp_ThuThu_Them`, `sp_ThuThu_TimKiem`, `sp_ThuThu_Xoa`
+- **Cập nhật định kỳ** (1): `sp_CapNhatTuoiTho`
+- **Thêm / xóa / sửa / tìm kiếm, báo giá** (32): `sp_ChiNhanh_Sua`, `sp_ChiNhanh_Them`, `sp_ChiNhanh_TimKiem`, `sp_ChiNhanh_Xoa`, `sp_CuonSach_ChuyenGia`, `sp_CuonSach_TimKiem`, `sp_CuonSach_Xoa`, `sp_DauSach_Sua`, `sp_DauSach_Them`, `sp_DauSach_TimKiem`, `sp_DauSach_Xoa`, `sp_DocGia_GiaHanThe`, `sp_DocGia_Sua`, `sp_DocGia_TimKiem`, `sp_DocGia_Xoa`, `sp_GiaSach_Sua`, `sp_GiaSach_Them`, `sp_GiaSach_TimKiem`, `sp_GiaSach_Xoa`, `sp_PhongDoc_Sua`, `sp_PhongDoc_Them`, `sp_PhongDoc_TimKiem`, `sp_PhongDoc_Xoa`, `sp_PhongKho_Sua`, `sp_PhongKho_Them`, `sp_PhongKho_TimKiem`, `sp_PhongKho_Xoa`, `sp_ThuePhong_BaoGia`, `sp_ThuThu_Sua`, `sp_ThuThu_Them`, `sp_ThuThu_TimKiem`, `sp_ThuThu_Xoa`
+- **Event** (1): `ev_CapNhatTuoiTho` (chạy mỗi ngày, gọi sp_CapNhatTuoiTho)
 
 ### 4.9 Kết quả kiểm thử tự động (08_test.sql)
 
-Kết quả: **47/47 ca PASS**.
+Kết quả: 52/52 ca đạt.
 
 | Mã ca | Mô tả | Kỳ vọng | Thực tế | Kết quả |
 | --- | --- | --- | --- | --- |
-| TX1-a | Mượn 11 cuốn trong 1 phiếu bị chặn | E101 | E101 | PASS |
-| TX1-b | Sau khi bị chặn không có phiếu mượn nào được tạo (ROLLBACK) | 0 | 0 | PASS |
-| TX1-c | Mượn đúng 10 cuốn hợp lệ | OK | OK | PASS |
-| TRG1 | Chèn trực tiếp cuốn thứ 11 vào phiếu đã có 10 cuốn | E101 | E101 | PASS |
-| TRG4-a | Số lượng trên giá giảm đúng bằng số cuốn của giá đó vừa được mượn | 27 | 27 | PASS |
-| TRG5 | Tuổi thọ cuốn sách giảm 1 tháng sau khi mượn | 5 | 5 | PASS |
-| TX1-d | Hạn trả = ngày mượn + số ngày mượn của thể loại/đầu sách | 1 | 1 | PASS |
-| TRG2-a | Mượn cuốn đang được người khác mượn | E104 | E104 | PASS |
-| TRG2-b | Độc giả DG0001 đang giữ 50 cuốn mượn thêm 1 cuốn | E102 | E102 | PASS |
-| TX2-a | Trả cuốn mà độc giả không mượn | E108 | E108 | PASS |
-| TX2-b | Trả muộn 5 ngày 2 cuốn (1 phiếu trả, nhiều cuốn) | OK | OK | PASS |
-| TRG3-a | Phiếu phạt tự lập cho cuốn trả muộn, tiền = cơ bản + 5 × phạt/ngày | 1 | 1 | PASS |
-| TRG4-b | Số lượng trên giá tăng đúng bằng số cuốn của giá đó vừa được trả | 29 | 29 | PASS |
-| TRG3-b | Sửa phiếu trả của dòng mượn đã trả | E106 | E106 | PASS |
-| TRG3-c | Ngày trả trước ngày mượn | E105 | E105 | PASS |
-| TX7-a | Độc giả còn nợ phạt thuê phòng bị chặn | E110 | E110 | PASS |
-| TRG8-b | Xóa độc giả không giữ sách nhưng còn nợ tiền phạt | E405 | E405 | PASS |
-| TX3-a | Thanh toán phạt | OK | OK | PASS |
-| TX3-b | Thanh toán khi không còn khoản nợ | E109 | E109 | PASS |
-| TX7-b | Thuê phòng nhóm 2 giờ hợp lệ | OK | OK | PASS |
-| TX7-c | Tiền thuê = 2 giờ × 50.000đ | 100000 | 100000 | PASS |
-| TRG7 | Thuê trùng khung giờ 10:00–12:00 | E201 | E201 | PASS |
-| TX7-d | Số người vượt sức chứa | E202 | E202 | PASS |
-| TX7-e | Thuê phòng hội thảo 1 giờ (tối thiểu 2 giờ) | E203 | E203 | PASS |
-| CK-THUE | Thuê lẻ phút (CHECK giờ tròn) | CK | CK | PASS |
-| TX6-a | Đăng ký độc giả mới với 2 số điện thoại | OK | OK | PASS |
-| TX6-b | Độc giả mới có thẻ hết hạn sau 1 năm | 2027-10-05 | 2027-10-05 | PASS |
-| TX6-c | Đăng ký với số điện thoại sai định dạng | CK | CK | PASS |
-| TX6-d | Sau lỗi SĐT không còn bản ghi NGUOI nào được thêm (ROLLBACK) | 216 | 216 | PASS |
-| TX6-e | Đăng ký không có số điện thoại | E408 | E408 | PASS |
-| TRG8-a | Xóa độc giả DG0001 đang giữ sách | E404 | E404 | PASS |
-| TRG8-c | Sửa mã độc giả | E406 | E406 | PASS |
-| TRG8-d | Xóa độc giả mới đăng ký (không giữ sách, không nợ) | OK | OK | PASS |
-| TX4-a | Nhập lô 3 cuốn đầu sách mới vào giá đúng thể loại | OK | OK | PASS |
-| TX4-b | Mã cuốn sinh đúng định dạng đầu sách + STT | TR0901-001,TR0901-002,TR0901-003 | TR0901-001,TR0901-002,TR0901-003 | PASS |
-| TX4-c | Nhập sách tham khảo vào giá truyện | E301 | E301 | PASS |
-| TX4-d | Đầu sách TK0901 không được tạo vì giao dịch bị ROLLBACK | 0 | 0 | PASS |
-| TRG6-a | Chuyển cuốn truyện sang giá tham khảo | E301 | E301 | PASS |
-| TRG6-b | Nhập thêm vào giá đã đầy | E304 | E304 | PASS |
-| CK-DAUSACH | Đầu sách mã TK nhưng thể loại TR (CHECK) | CK | CK | PASS |
-| TRG6-c | Cuốn trên giá hết tuổi thọ tự chuyển ChoThanhLy | ChoThanhLy | ChoThanhLy | PASS |
-| TX5-a | Thanh lý sách hết niên hạn | OK | OK | PASS |
-| TX5-b | Cuốn đã chuyển sang SACH_THANH_LY và rời khỏi CUON_SACH | 10 | 10 | PASS |
-| TV-1 | SoLuongHienCo của mọi giá khớp số cuốn không đang mượn | 0 | 0 | PASS |
-| TV-2 | Không độc giả nào giữ quá 50 cuốn | 1 | 1 | PASS |
-| TV-3 | Không phiếu mượn nào quá 10 cuốn | 0 | 0 | PASS |
-| TV-4 | Không có 2 lượt thuê đã duyệt trùng giờ cùng phòng | 0 | 0 | PASS |
+| TX1-a | Mượn 11 cuốn trong 1 phiếu bị chặn | E101 | E101 | Đạt |
+| TX1-b | Sau khi bị chặn không có phiếu mượn nào được tạo (ROLLBACK) | 0 | 0 | Đạt |
+| TX1-c | Mượn đúng 10 cuốn hợp lệ | OK | OK | Đạt |
+| TRG1 | Chèn trực tiếp cuốn thứ 11 vào phiếu đã có 10 cuốn | E101 | E101 | Đạt |
+| TRG4-a | Số lượng trên giá giảm đúng bằng số cuốn của giá đó vừa được mượn | 27 | 27 | Đạt |
+| TRG5 | Tuổi thọ cuốn sách giảm 1 tháng sau khi mượn | 1 | 1 | Đạt |
+| TX1-d | Hạn trả = ngày mượn + số ngày mượn của thể loại/đầu sách | 1 | 1 | Đạt |
+| TRG2-a | Mượn cuốn đang được người khác mượn | E104 | E104 | Đạt |
+| TRG2-b | Độc giả DG0001 đang giữ 50 cuốn mượn thêm 1 cuốn | E102 | E102 | Đạt |
+| TX1-e | Danh sách mượn có mã cuốn bị lặp | E104 | E104 | Đạt |
+| TX2-a | Trả cuốn mà độc giả không mượn | E108 | E108 | Đạt |
+| TX2-b | Trả muộn 5 ngày 2 cuốn (1 phiếu trả, nhiều cuốn) | OK | OK | Đạt |
+| TRG3-a | Phiếu phạt tự lập cho cuốn trả muộn, tiền = cơ bản + 5 × phạt/ngày | 1 | 1 | Đạt |
+| TRG4-b | Số lượng trên giá tăng đúng bằng số cuốn của giá đó vừa được trả | 29 | 29 | Đạt |
+| TRG3-b | Sửa phiếu trả của dòng mượn đã trả | E106 | E106 | Đạt |
+| TRG3-c | Ngày trả trước ngày mượn | E105 | E105 | Đạt |
+| TX7-a | Độc giả còn nợ phạt thuê phòng bị chặn | E110 | E110 | Đạt |
+| TRG8-b | Xóa độc giả không giữ sách nhưng còn nợ tiền phạt | E405 | E405 | Đạt |
+| TX3-a | Thanh toán phạt | OK | OK | Đạt |
+| TX3-b | Thanh toán khi không còn khoản nợ | E109 | E109 | Đạt |
+| TX7-b | Thuê phòng nhóm 2 giờ hợp lệ | OK | OK | Đạt |
+| TX7-c | Tiền thuê = 2 giờ × 50.000đ | 100000 | 100000 | Đạt |
+| BG-1 | Báo giá phòng hội thảo 3 giờ = 3 × 300.000đ | 900000 | 900000 | Đạt |
+| BG-2 | Mọi lượt thuê đã lưu có tiền khớp công thức báo giá | 0 | 0 | Đạt |
+| TRG7 | Thuê trùng khung giờ 10:00–12:00 | E201 | E201 | Đạt |
+| TX7-d | Số người vượt sức chứa | E202 | E202 | Đạt |
+| TX7-e | Thuê phòng hội thảo 1 giờ (tối thiểu 2 giờ) | E203 | E203 | Đạt |
+| CK-THUE | Thuê lẻ phút (CHECK giờ tròn) | CK | CK | Đạt |
+| TX6-a | Đăng ký độc giả mới với 2 số điện thoại | OK | OK | Đạt |
+| TX6-b | Độc giả mới có thẻ hết hạn sau 1 năm | 2027-10-05 | 2027-10-05 | Đạt |
+| TX6-c | Đăng ký với số điện thoại sai định dạng | CK | CK | Đạt |
+| TX6-d | Sau lỗi SĐT không còn bản ghi NGUOI nào được thêm (ROLLBACK) | 216 | 216 | Đạt |
+| TX6-e | Đăng ký không có số điện thoại | E408 | E408 | Đạt |
+| TRG8-a | Xóa độc giả DG0001 đang giữ sách | E404 | E404 | Đạt |
+| TRG8-c | Sửa mã độc giả | E406 | E406 | Đạt |
+| TRG8-d | Xóa độc giả mới đăng ký (không giữ sách, không nợ) | OK | OK | Đạt |
+| TX4-a | Nhập lô 3 cuốn đầu sách mới vào giá đúng thể loại | OK | OK | Đạt |
+| TX4-b | Mã cuốn sinh đúng định dạng đầu sách + STT | TR0901-001,TR0901-002,TR0901-003 | TR0901-001,TR0901-002,TR0901-003 | Đạt |
+| TX4-c | Nhập sách tham khảo vào giá truyện | E301 | E301 | Đạt |
+| TX4-d | Đầu sách TK0901 không được tạo vì giao dịch bị ROLLBACK | 0 | 0 | Đạt |
+| TRG6-a | Chuyển cuốn truyện sang giá tham khảo | E301 | E301 | Đạt |
+| TRG6-b | Nhập thêm vào giá đã đầy | E304 | E304 | Đạt |
+| CK-DAUSACH | Đầu sách mã TK nhưng thể loại TR (CHECK) | CK | CK | Đạt |
+| TRG6-c | Cuốn trên giá hết tuổi thọ tự chuyển ChoThanhLy | ChoThanhLy | ChoThanhLy | Đạt |
+| TX5-a | Thanh lý sách hết niên hạn | OK | OK | Đạt |
+| TX5-b | Cuốn đã chuyển sang SACH_THANH_LY và rời khỏi CUON_SACH | 10 | 10 | Đạt |
+| TT-1 | Hai tháng sau ngày nhập, tuổi thọ còn 180 − 2 = 178 tháng | 178 | 178 | Đạt |
+| TT-2 | Chạy lại với ngày sớm hơn không làm tuổi thọ tăng lên | 178 | 178 | Đạt |
+| TV-1 | SoLuongHienCo của mọi giá khớp số cuốn không đang mượn | 0 | 0 | Đạt |
+| TV-2 | Không độc giả nào giữ quá 50 cuốn | 1 | 1 | Đạt |
+| TV-3 | Không phiếu mượn nào quá 10 cuốn | 0 | 0 | Đạt |
+| TV-4 | Không có 2 lượt thuê đã duyệt trùng giờ cùng phòng | 0 | 0 | Đạt |
 

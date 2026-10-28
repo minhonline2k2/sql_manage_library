@@ -138,7 +138,7 @@ while (i < md.length) {
 }
 
 const doc = new Document({
-  creator: "Nhóm BTL", title: "Báo cáo BTL – Hệ thống quản lý thư viện",
+  creator: "Nhóm BTL", lastModifiedBy: "Nhóm BTL", title: "Báo cáo BTL – Hệ thống quản lý thư viện",
   features: { updateFields: true },
   styles: {
     default: { document: { run: { font: FONT, size: 26 } } },

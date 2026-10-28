@@ -348,4 +348,25 @@ CREATE OR REPLACE PROCEDURE sp_ThuePhong_BaoGia(IN p_MaPhongDoc VARCHAR(8), IN p
   FROM PHONG_DOC p JOIN LOAI_PHONG l ON l.MaLoaiPhong = p.MaLoaiPhong
   WHERE p.MaPhongDoc = p_MaPhongDoc //
 
+-- ---------------------------------------------------------------------
+-- Tuổi thọ giảm theo thời gian (đề: sách truyện 15 năm, tham khảo 10 năm…)
+-- Tuổi thọ còn lại tại ngày p_Ngay = tuổi thọ thể loại (tháng) − số tháng kể từ ngày nhập − số lần đã mượn.
+-- Chỉ cho giảm (LEAST) nên không xóa điều chỉnh tay và không đụng phần TRG5 đã trừ khi mượn;
+-- cuốn trên giá về 0 được TRG6 tự chuyển 'ChoThanhLy'. Event ev_CapNhatTuoiTho gọi mỗi ngày.
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE sp_CapNhatTuoiTho(IN p_Ngay DATE, OUT p_SoCuon INT)
+BEGIN
+  UPDATE CUON_SACH cs
+    JOIN DAU_SACH ds ON ds.MaDauSach = cs.MaDauSach
+    JOIN THE_LOAI tl ON tl.MaTheLoai = ds.MaTheLoai
+  SET cs.TuoiThoConLaiThang = LEAST(cs.TuoiThoConLaiThang,
+        GREATEST(tl.TuoiThoNam * 12 - TIMESTAMPDIFF(MONTH, cs.NgayNhap, COALESCE(p_Ngay, CURDATE()))
+                 - (SELECT COUNT(*) FROM CT_MUON m WHERE m.MaCuonSach = cs.MaCuonSach), 0));
+  SET p_SoCuon = ROW_COUNT();
+END //
+
+CREATE OR REPLACE EVENT ev_CapNhatTuoiTho
+  ON SCHEDULE EVERY 1 DAY STARTS (CURRENT_DATE + INTERVAL 1 DAY + INTERVAL 5 MINUTE)
+  DO CALL sp_CapNhatTuoiTho(CURDATE(), @so_cuon) //
+
 DELIMITER ;

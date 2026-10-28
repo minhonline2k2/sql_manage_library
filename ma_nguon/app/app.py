@@ -49,6 +49,11 @@ def bao(noi="chung"):
         del st.session_state["thong_bao"]
 
 
+def tien(x):
+    """Số tiền kiểu Việt Nam: 3200000 → '3.200.000 đ'."""
+    return f"{x:,.0f}".replace(",", ".") + " đ"
+
+
 def ds_ma(text):
     return json.dumps([x.strip() for x in text.replace("\n", ",").split(",") if x.strip()])
 
@@ -139,12 +144,12 @@ elif trang == "Trả sách & phạt":
             ngay = st.date_input("Ngày trả", date.today())
             cuon = chon("Cuốn trả (1 hoặc nhiều)", dang_giu, "MaCuonSach", "TenSach", key=f"tra_cuon_{st.session_state.get('lam_moi', 0)}", nhieu=True)
             if st.button("Lập phiếu trả", type="primary", disabled=not cuon):
-                chay(lambda: "phiếu %s, tiền phạt %s đ" % tuple(goi("sp_TraSach", dg, ma_thu_thu, json.dumps(cuon), ngay, so_out=2)[1]),
+                chay(lambda: (lambda pt, phat: f"phiếu {pt}, tiền phạt {tien(phat)}")(*goi("sp_TraSach", dg, ma_thu_thu, json.dumps(cuon), ngay, so_out=2)[1]),
                      "Đã trả", "tra")
             bao("tra")
         with c2:
             if st.button("Thanh toán toàn bộ phạt"):
-                chay(lambda: f"{goi('sp_ThanhToanPhat', dg, date.today(), so_out=1)[1][0]:,} đ", "Đã thu", "phat")
+                chay(lambda: tien(goi('sp_ThanhToanPhat', dg, date.today(), so_out=1)[1][0]), "Đã thu", "phat")
             bao("phat")
 
 # ------------------------------------------------------------------ PHÒNG ĐỌC
@@ -163,12 +168,12 @@ elif trang == "Phòng đọc":
             bg = bang("sp_ThuePhong_BaoGia", phong, bd, kt, so_nguoi) if phong else None
             if bg is not None and not bg.empty:   # Streamlit chạy lại mỗi lần đổi giá trị → giá cập nhật ngay
                 r = bg.iloc[0]
-                st.metric("Tiền thuê dự kiến", f"{r.TongTien:,.0f} đ".replace(",", "."))
-                st.caption(f"{r.TenLoai}: {r.GiaMoiGio:,.0f} đ/giờ × {r.SoGio} giờ".replace(",", "."))
+                st.metric("Tiền thuê dự kiến", tien(r.TongTien))
+                st.caption(f"{r.TenLoai}: {tien(r.GiaMoiGio)}/giờ × {r.SoGio} giờ")
                 if r.CanhBao:
                     st.warning(r.CanhBao)
             if st.button("Đặt phòng", type="primary", disabled=not (dg and phong)):
-                chay(lambda: "phiếu %s, %s đ" % tuple(goi("sp_ThuePhong", dg, phong, ma_thu_thu,
+                chay(lambda: (lambda pt, so_tien: f"phiếu {pt}, {tien(so_tien)}")(*goi("sp_ThuePhong", dg, phong, ma_thu_thu,
                      bd, kt, so_nguoi, date.today(), so_out=2)[1]), "Đã đặt", "dat_phong")
             bao("dat_phong")
         with c2:

@@ -21,9 +21,11 @@ o = []
 
 o.append("""# LỜI MỞ ĐẦU
 
-Báo cáo trình bày toàn bộ quá trình xây dựng hệ cơ sở dữ liệu quản lý thư viện theo kịch bản được giao: phân tích yêu cầu, thiết kế mức khái niệm (lược đồ E-R), thiết kế mức logic và chuẩn hóa về dạng BCNF, cài đặt trên hệ quản trị MariaDB với đầy đủ ràng buộc, 8 trigger và 7 transaction nghiệp vụ, dữ liệu vận hành 3 tháng, các truy vấn báo cáo theo yêu cầu, giao diện kết nối CSDL, và cuối cùng là phân tích, thiết kế cơ sở dữ liệu phân tán cho 3 chi nhánh.
+Trong học phần Các hệ thống cơ sở dữ liệu, nhóm chúng em được giao đề tài "Xây dựng hệ thống quản lý thư viện". Đây là bài toán quen thuộc nhưng có khá nhiều ràng buộc cần xử lý cẩn thận: mỗi giá chỉ chứa sách của một thể loại, mỗi lần mượn không quá 10 cuốn, mỗi độc giả không giữ quá 50 cuốn, tiền phạt và tuổi thọ của sách phụ thuộc vào thể loại, phòng đọc không được cho thuê trùng giờ. Vì vậy nhóm quyết định đặt toàn bộ các luật này ngay trong cơ sở dữ liệu (ràng buộc, trigger, thủ tục lưu trữ) thay vì để giao diện tự kiểm tra. Nhờ đó, dù thao tác qua giao diện hay gõ lệnh SQL trực tiếp, dữ liệu vẫn luôn hợp lệ.
 
-Nguyên tắc xuyên suốt: **mọi luật nghiệp vụ nằm trong CSDL** (ràng buộc, trigger, stored procedure); giao diện chỉ gọi procedure và hiển thị kết quả, nên mọi ràng buộc vẫn được đảm bảo khi thao tác trực tiếp bằng SQL. Toàn bộ mã nguồn được chạy và kiểm thử tự động: 47/47 ca kiểm thử nghiệp vụ, 36/36 ca kiểm tra phân mảnh và 23/23 thao tác trên giao diện đều đạt.
+Báo cáo gồm năm chương. Chương 1 phân tích các yêu cầu của đề. Chương 2 trình bày lược đồ thực thể – liên kết. Chương 3 chuyển lược đồ E-R sang lược đồ quan hệ và chuẩn hóa về dạng BCNF. Chương 4 trình bày quá trình cài đặt trên MariaDB, dữ liệu ba tháng vận hành, các truy vấn theo yêu cầu, kết quả kiểm thử và giao diện ứng dụng. Chương 5 phân tích và thiết kế cơ sở dữ liệu phân tán cho ba chi nhánh. Mã nguồn SQL chính được đưa vào phần phụ lục.
+
+Nhóm chúng em xin chân thành cảm ơn cô Phan Thị Hà đã tận tình giảng dạy và hướng dẫn trong suốt học phần. Do thời gian và hiểu biết còn hạn chế, báo cáo khó tránh khỏi thiếu sót; nhóm rất mong nhận được góp ý của cô để bài làm được hoàn thiện hơn.
 """)
 
 o.append("# CHƯƠNG 1. PHÂN TÍCH YÊU CẦU\n")
@@ -32,7 +34,15 @@ o.append(ha_cap(doan(P1, "### 1.1", "## 2.")))
 c2 = ha_cap(doan(P1, "### 2.1"))
 c2 = re.sub(r"## 2\.4 Sơ đồ\n\n.*", """## 2.4 Sơ đồ E-R
 
-Sơ đồ dùng ký hiệu Chen như bài giảng: chữ nhật = tập thực thể, chữ nhật kép = thực thể yếu, thoi = liên kết, thoi kép = liên kết xác định, ellipse = thuộc tính (gạch chân = khóa, gạch chân mảnh = khóa bán phần, nét đứt = dẫn xuất, viền kép = đa trị), tam giác ISA có chữ d = phân tách (disjoint), thoi nét đứt gom_sach = kết hợp (aggregation), thoi màu cam thue_phong = liên kết 3 ngôi giữa DOC_GIA, PHONG_DOC và THU_THU (thủ thư duyệt) mang các thuộc tính của lượt thuê. Ký hiệu liên kết theo bài giảng: nhãn lực lượng 1 / N / M ghi sát mỗi thực thể (1:1, 1:N, N:1, M:N); chân gà đặt ở đầu thực thể phía "nhiều"; đường đôi giữa thực thể và hình thoi = thực thể tham gia toàn bộ, đường đơn = tham gia một phần; ràng buộc (min,max) ghi kèm khi có giới hạn cụ thể: (1,10) cạnh PHIEU_MUON trên gom_sach (mỗi phiếu mượn 1–10 cuốn) và (0,50) trên nhánh DOC_GIA của giu_sach (mỗi độc giả giữ tối đa 50 cuốn). Liên kết đệ quy quan_ly ghi tên vai trò (quản lý, nhân viên) trên hai nhánh; đường đôi từ NGUOI lên tam giác ISA = tổng quát hóa đầy đủ. Riêng sơ đồ lược đồ quan hệ (mục 3.7) dùng ký hiệu chân gà đầy đủ của chuẩn IE cho cạnh khóa ngoại.
+Lược đồ E-R ở Hình 2.1 được vẽ theo ký hiệu Chen trong bài giảng:
+
+- Tập thực thể là hình chữ nhật, thực thể yếu là hình chữ nhật viền kép; liên kết là hình thoi, liên kết xác định là hình thoi viền kép.
+- Thuộc tính là hình ellipse: thuộc tính khóa được gạch chân, khóa bán phần của thực thể yếu có viền xám, thuộc tính dẫn xuất vẽ nét đứt, thuộc tính đa trị có viền kép.
+- Tam giác ISA có chữ d thể hiện cụ thể hóa phân tách (disjoint); đường đôi từ NGUOI lên tam giác nghĩa là mọi người đều phải là độc giả hoặc thủ thư.
+- Hình thoi nét đứt gom_sach là kết hợp (aggregation). Hình thoi màu cam thue_phong là liên kết 3 ngôi giữa DOC_GIA, PHONG_DOC và THU_THU (thủ thư duyệt), mang các thuộc tính của một lượt thuê.
+- Trên mỗi đường nối, nhãn 1, N hoặc M ghi sát thực thể cho biết lực lượng liên kết; đầu thực thể ở phía "nhiều" có thêm ký hiệu chân chim. Đường đôi giữa thực thể và hình thoi nghĩa là thực thể đó tham gia toàn bộ, đường đơn là tham gia một phần.
+- Hai giới hạn cụ thể của đề được ghi bằng cặp (min,max): (1,10) cạnh PHIEU_MUON trên gom_sach, tức mỗi phiếu mượn có từ 1 đến 10 cuốn; (0,50) trên nhánh DOC_GIA của giu_sach, tức mỗi độc giả giữ nhiều nhất 50 cuốn.
+- Liên kết đệ quy quan_ly ghi tên vai trò "quản lý" và "nhân viên" trên hai nhánh.
 
 ![Hình 2.1. Lược đồ E-R của hệ thống quản lý thư viện](../erd/erd_doc.png)
 """, c2, flags=re.S)
@@ -43,7 +53,7 @@ o.append("# CHƯƠNG 3. LƯỢC ĐỒ QUAN HỆ VÀ CHUẨN HÓA\n")
 o.append(doan(P2, "Ký hiệu:"))
 o.append("""## 3.7 Sơ đồ lược đồ quan hệ
 
-Sơ đồ được sinh tự động từ `information_schema` của CSDL đã cài đặt (script `gen_tudien.py`): mỗi khung là một quan hệ, khóa chính in đậm gạch chân, khóa ngoại in nghiêng, mỗi cạnh nối cột khóa ngoại với khóa chính được tham chiếu và dùng ký hiệu chân gà suy ra từ ràng buộc thật: đầu bảng chứa khóa ngoại là không hoặc nhiều (không hoặc một nếu cột khóa ngoại là UNIQUE), đầu bảng được tham chiếu là một và chỉ một (không hoặc một nếu khóa ngoại cho phép NULL). Màu nền tiêu đề chia 4 nhóm nghiệp vụ: con người (xanh dương), sách và kho (xanh lá), mượn trả (cam), phòng đọc (vàng).
+Hình 3.1 được vẽ tự động từ `information_schema` của CSDL đã cài đặt (chương trình `gen_tudien.py`), nên luôn khớp với các bảng thật. Mỗi khung là một quan hệ; khóa chính in đậm và gạch chân, khóa ngoại in nghiêng. Mỗi đường nối đi từ cột khóa ngoại tới khóa chính mà nó tham chiếu, hai đầu đường dùng ký hiệu chân chim: phía bảng chứa khóa ngoại là "không hoặc nhiều" (hoặc "không hoặc một" nếu cột khóa ngoại là UNIQUE), phía bảng được tham chiếu là "một và chỉ một" (hoặc "không hoặc một" nếu khóa ngoại được phép NULL). Màu nền dòng tiêu đề chia các bảng thành bốn nhóm: con người (xanh dương), sách và kho (xanh lá), mượn trả (cam), phòng đọc (vàng).
 
 ![Hình 3.1. Sơ đồ lược đồ quan hệ với các liên kết khóa chính – khóa ngoại](../erd/luoc_do_quan_he.png)
 """)
@@ -51,23 +61,23 @@ o.append(R("tu_dien_du_lieu.md"))
 
 c4 = ["# CHƯƠNG 4. CÀI ĐẶT CƠ SỞ DỮ LIỆU VÀ ỨNG DỤNG\n", """## 4.1 Môi trường và quy trình cài đặt
 
-- Hệ quản trị: **MariaDB** (kiểm thử trên 10.11 LTS, tương thích 11.4 LTS), engine InnoDB, bảng mã `utf8mb4`, collation `utf8mb4_unicode_ci`.
+- Hệ quản trị: MariaDB (kiểm thử trên 10.11 LTS, tương thích 11.4 LTS), engine InnoDB, bảng mã `utf8mb4`, collation `utf8mb4_unicode_ci`.
 - Giao diện: Python 3 + Streamlit + PyMySQL (chỉ gọi stored procedure / view).
 - Mã nguồn chia thành các script chạy theo thứ tự, dựng lại toàn bộ CSDL bằng một lệnh `sh build_all.sh -uroot -p`:
 
 | File | Nội dung |
 | --- | --- |
 | 01_schema.sql | Tạo database QLTV, 23 bảng và toàn bộ ràng buộc PK, FK, UNIQUE, CHECK, DEFAULT |
-| 02_function_procedure.sql | 8 function nghiệp vụ, các procedure thêm/xóa/sửa/tìm kiếm |
+| 02_function_procedure.sql | 8 function nghiệp vụ, các procedure thêm/xóa/sửa/tìm kiếm, báo giá thuê phòng, thủ tục và event cập nhật tuổi thọ sách |
 | 03_trigger.sql | 8 trigger nghiệp vụ (18 trigger con) |
 | 04_transaction.sql | 7 transaction nghiệp vụ dạng procedure |
 | 05_seed.sql | Dữ liệu 3 tháng, sinh bởi gen_seed.py bằng cách gọi chính các transaction |
 | 06_view_baocao.sql | 6 truy vấn hiển thị theo yêu cầu đề (view + procedure) |
 | 07_index_baomat.sql | Chỉ mục tối ưu, vai trò và phân quyền |
-| 08_test.sql | 47 ca kiểm thử tự động |
+| 08_test.sql | 52 ca kiểm thử tự động |
 | 09_phan_tan.sql | Minh họa phân mảnh, cấp phát, nhân bản trên 3 site |
 
-Dữ liệu mẫu không nhập tay mà được sinh bằng chương trình mô phỏng thư viện chạy từng ngày từ 01/07 đến 30/09/2026: mỗi ngày phát sinh lời gọi đăng ký độc giả, mượn sách (TX1), trả sách (TX2), nộp phạt (TX3), gia hạn thẻ, thuê phòng (TX7), và thanh lý sách (TX5) giữa kỳ. Nhờ đó mọi bản ghi đều đi qua trigger và kiểm tra nghiệp vụ, dữ liệu luôn hợp lệ; hạt giống ngẫu nhiên cố định giúp mọi lần dựng cho ra cùng một bộ dữ liệu.
+Dữ liệu mẫu không nhập tay mà được sinh bằng một chương trình mô phỏng thư viện chạy từng ngày từ 01/07 đến 30/09/2026. Mỗi ngày chương trình phát sinh các lời gọi đăng ký độc giả, mượn sách (TX1), trả sách (TX2), nộp phạt (TX3), gia hạn thẻ, thuê phòng (TX7); giữa kỳ có một đợt thanh lý sách (TX5). Như vậy mọi bản ghi đều đi qua trigger và các bước kiểm tra nghiệp vụ, dữ liệu luôn hợp lệ; hạt giống ngẫu nhiên được cố định nên lần dựng nào cũng cho ra cùng một bộ dữ liệu. Cuối file, thủ tục sp_CapNhatTuoiTho đưa tuổi thọ sách về đúng ngày dựng CSDL; sau đó event ev_CapNhatTuoiTho của MariaDB tự cập nhật mỗi ngày (cần bật event_scheduler).
 
 ## 4.2 Một số lưu ý khi cài đặt trên MariaDB
 
@@ -101,7 +111,8 @@ c4.append("""## 4.7 Đặc tả trigger và transaction nghiệp vụ
 | TRG6 | trg_CuonSach_DungGia_Them/Sua (CUON_SACH, BEFORE) | Giá chỉ chứa sách cùng thể loại, không vượt sức chứa; sách hết tuổi thọ tách khỏi lưu thông | Sai thể loại → E301; giá đầy (tính cả cuốn đang mượn) → E304; không sửa mã → E305; tuổi thọ = 0 và đang trên giá → SET NEW.TrangThai = 'ChoThanhLy' |
 | TRG7 | trg_ThuePhong_KhongTrung_Them/Sua (BEFORE) | Một phòng không có 2 lượt thuê trùng giờ | Tồn tại lượt đã duyệt giao khoảng [BatDau, KetThuc) → E201 |
 | TRG8 | trg_DocGia_ChanXoa, trg_DocGia_ChanSuaMa, trg_DocGia_DungLoai, trg_ThuThu_DungLoai | Toàn vẹn độc giả và ISA | Còn giữ sách → E404; còn nợ phạt → E405; sửa mã → E406; bảng con không khớp LoaiNguoi → E407 |
-| TX1 | sp_MuonSach | Lập phiếu mượn 1–10 cuốn | Kiểm tra thẻ (E103), khóa dòng độc giả và các cuốn bằng FOR UPDATE, lập phiếu, chèn chi tiết với hạn trả fn_HanTra; mọi lỗi → ROLLBACK cả phiếu |
+| Tuổi thọ | sp_CapNhatTuoiTho, event ev_CapNhatTuoiTho (chạy mỗi ngày) | Tuổi thọ sách giảm theo thời gian | Tuổi thọ còn lại = tuổi thọ thể loại (tháng) − số tháng kể từ ngày nhập − số lần đã mượn; chỉ cho giảm, không bao giờ tăng; cuốn trên giá về 0 được TRG6 chuyển sang ChoThanhLy |
+| TX1 | sp_MuonSach | Lập phiếu mượn 1–10 cuốn | Kiểm tra thẻ (E103), khóa dòng độc giả và các cuốn bằng FOR UPDATE, cuốn không trên giá hoặc bị lặp trong danh sách → E104, lập phiếu, chèn chi tiết với hạn trả fn_HanTra; mọi lỗi → ROLLBACK cả phiếu |
 | TX2 | sp_TraSach | Trả 1 đến nhiều cuốn | Lập phiếu trả, cập nhật chi tiết mượn; số dòng cập nhật khác số cuốn → E108 và ROLLBACK; trả về tổng phạt |
 | TX3 | sp_ThanhToanPhat | Thu toàn bộ phạt chưa thanh toán | Khóa các phiếu phạt, đánh dấu đã thanh toán; không có nợ → E109 |
 | TX4 | sp_NhapLoSach | Nhập đầu sách mới, tác giả, n cuốn | Tạo đầu sách + tác giả (nếu mới), sinh mã cuốn liên tiếp, xếp lên giá; giá sai thể loại hoặc đầy → ROLLBACK toàn bộ lô |
@@ -152,19 +163,23 @@ ui = [("01_muon_sach", "Màn hình mượn sách"), ("02a_muon_thanh_cong", "L�
       ("04_thue_phong", "Màn hình thuê phòng đọc: tiền thuê dự kiến cập nhật theo phòng, khung giờ và tình trạng phòng"), ("04a_them_phong_doc", "Quản lý phòng đọc: thêm phòng mới thành công"),
       ("05_doc_gia", "Quản lý độc giả: danh sách, bấm chọn hàng để sửa, gia hạn, xóa"), ("05a_dang_ky_doc_gia", "Đăng ký độc giả mới (TX6) thành công"),
       ("05b_xoa_doc_gia_bi_chan", "Xóa độc giả còn giữ sách bị trigger chặn (E404)"),
-      ("06_sach_kho", "Quản lý sách và kho: tìm kiếm đầu sách"), ("06a_them_phong_kho", "Thêm phòng kho thành công"),
+      ("06_sach_kho", "Quản lý sách và kho: danh sách đầu sách"), ("06a_them_phong_kho", "Thêm phòng kho thành công"),
       ("06b_them_gia_sach", "Thêm giá sách thành công"), ("06c_xoa_cuon_bi_chan", "Xóa cuốn sách đã có lịch sử mượn bị chặn (E303)"),
-      ("07_thu_thu", "Tìm kiếm thủ thư"), ("07a_them_thu_thu", "Thêm thủ thư mới thành công"),
+      ("07_thu_thu", "Danh sách thủ thư của chi nhánh"), ("07a_them_thu_thu", "Thêm thủ thư mới thành công"),
       ("07b_xoa_truong_bi_chan", "Xóa thủ thư đang là trưởng chi nhánh bị chặn (E403)")]
 kq = json.load(open("../anh/ket_qua_giao_dien.json", encoding="utf-8"))
 dat = sum(1 for r in kq if r[1] == r[2])
 bang_kq = "| # | Thao tác (nút bấm) | Kỳ vọng | Thông báo của hệ thống | Kết quả |\n| --- | --- | --- | --- | --- |\n" + "\n".join(
-    f"| {i} | {r[0]} | {'Thành công' if r[1] == 'success' else 'Bị chặn'} | {r[3].replace('|', '/')} | {'PASS' if r[1] == r[2] else 'FAIL'} |" for i, r in enumerate(kq, 1))
+    f"| {i} | {r[0]} | {'Thành công' if r[1] == 'success' else 'Bị chặn'} | {r[3].replace('|', '/')} | {'Đạt' if r[1] == r[2] else 'Không đạt'} |" for i, r in enumerate(kq, 1))
 c4.append("""## 4.13 Giao diện ứng dụng
 
-Ứng dụng có 7 chức năng ở thanh bên trái (mượn sách; trả sách và phạt; phòng đọc; độc giả; sách và kho; thủ thư và chi nhánh; báo cáo); người dùng chọn chi nhánh và thủ thư thao tác. Mỗi đối tượng chính đều có đủ thêm, sửa, xóa, tìm kiếm trên giao diện: độc giả, thủ thư, chi nhánh (đổi thủ thư trưởng), đầu sách, cuốn sách (chuyển giá, xóa, thanh lý), giá sách, phòng kho, phòng đọc. Các bảng dữ liệu bấm chọn được cả hàng: form sửa/xóa lấy theo hàng đang chọn và bảng tự nạp lại, bỏ chọn sau mỗi thao tác; các mã đã có trong CSDL (độc giả, cuốn sách khi mượn/trả, phòng, giá, đầu sách khi nhập lô) được chọn từ danh sách có ô gõ để lọc thay vì gõ tay. Trang phòng đọc hiện tiền thuê dự kiến (procedure `sp_ThuePhong_BaoGia`, dùng chung function `fn_TienThuePhong` với TX7) cùng cảnh báo E202/E203 ngay khi đổi phòng, khung giờ hoặc số người. Mỗi nút bấm gọi đúng một stored procedure; khi CSDL từ chối (SIGNAL, CHECK, khóa ngoại), giao diện hiển thị nguyên văn thông báo lỗi, chứng tỏ luật nghiệp vụ nằm hoàn toàn trong CSDL. Kết nối dùng tài khoản `ql_thuvien` (vai trò r_QuanLy), không có quyền ghi trực tiếp vào bảng.
+Ứng dụng có bảy chức năng ở thanh bên trái: mượn sách, trả sách và phạt, phòng đọc, độc giả, sách và kho, thủ thư và chi nhánh, báo cáo. Trước khi thao tác, thủ thư chọn chi nhánh làm việc và tên của mình. Các đối tượng chính (độc giả, thủ thư, chi nhánh, đầu sách, cuốn sách, giá sách, phòng kho, phòng đọc) đều có thể thêm, sửa, xóa và tìm kiếm ngay trên giao diện.
 
-Giao diện được kiểm thử tự động bằng Playwright (script `app/chup_man_hinh.py`): trình duyệt mở từng màn hình, nhập dữ liệu, bấm nút và đọc thông báo trả về. Kết quả: **{{dat}}/{{len(kq)}} thao tác đúng kỳ vọng**.
+Để thủ thư ít phải gõ, các bảng dữ liệu cho phép bấm vào một hàng để chọn; ô sửa sẽ hiện sẵn giá trị của hàng đó, và sau mỗi thao tác bảng được nạp lại. Những mã đã có trong CSDL như độc giả, cuốn sách, phòng, giá, đầu sách được chọn từ danh sách, có ô gõ để lọc nhanh. Ở trang mượn và trả, thủ thư có thể bấm thẳng nhiều hàng trong bảng sách để đưa các cuốn đó vào phiếu. Trang phòng đọc hiện tiền thuê dự kiến ngay khi đổi phòng, khung giờ hoặc số người; số tiền này lấy từ procedure `sp_ThuePhong_BaoGia`, dùng chung công thức `fn_TienThuePhong` với TX7 nên luôn khớp với tiền thực thu, kèm cảnh báo E202, E203 nếu thuê sai quy định.
+
+Mỗi nút bấm gọi đúng một stored procedure. Khi CSDL từ chối một thao tác (do SIGNAL, CHECK hoặc khóa ngoại), giao diện hiện nguyên văn thông báo lỗi của CSDL; bản thân giao diện không tự kiểm tra luật nghiệp vụ nào. Ứng dụng kết nối bằng tài khoản `ql_thuvien` (vai trò r_QuanLy), tài khoản này không có quyền ghi trực tiếp vào bảng.
+
+Giao diện được kiểm thử tự động bằng Playwright (chương trình `app/chup_man_hinh.py`): trình duyệt lần lượt mở từng màn hình, chọn dữ liệu, bấm nút và đọc thông báo trả về. Kết quả {{dat}}/{{len(kq)}} thao tác cho đúng kết quả mong đợi.
 
 {{bang_kq}}
 
@@ -172,23 +187,24 @@ Giao diện được kiểm thử tự động bằng Playwright (script `app/ch
 o += c4
 
 c5 = doan(P8, "## 5.1")
-c5 = re.sub(r"Sơ đồ \(vẽ ở phần báo cáo, file `btl/phan_tan/so_do_tong_the.dot`\): ", "", c5)
 c5 = c5.replace("## 5.8 Sơ đồ tổng thể hệ thống\n", "## 5.8 Sơ đồ tổng thể hệ thống\n\n![Hình 5.1. Sơ đồ tổng thể hệ CSDL phân tán của thư viện](../phan_tan/so_do_tong_the.png)\n")
 o.append("# CHƯƠNG 5. PHÂN TÍCH VÀ THIẾT KẾ CƠ SỞ DỮ LIỆU PHÂN TÁN\n")
 o.append(c5)
 
 o.append("""# KẾT LUẬN
 
-Nhóm đã xây dựng hoàn chỉnh hệ CSDL quản lý thư viện theo kịch bản được giao:
+Qua bài tập lớn này, nhóm đã đi qua đủ các bước thiết kế một hệ cơ sở dữ liệu, từ phân tích yêu cầu đến cài đặt và kiểm thử. Những kết quả chính nhóm đạt được:
 
-- Lược đồ E-R có đủ các loại tập thực thể (mạnh, yếu, ISA), thuộc tính (đơn, kép, đa trị, dẫn xuất, rỗng) và liên kết (1:1, 1:N, N:N, đệ quy, 3 ngôi, xác định, kết hợp, ràng buộc min-max).
-- 23 lược đồ quan hệ ở dạng chuẩn BCNF, có phụ thuộc hàm, khóa, quá trình chuẩn hóa minh họa, sơ đồ khóa chính – khóa ngoại và từ điển dữ liệu.
-- Cài đặt trên MariaDB với 23 khóa chính, 34 khóa ngoại, 11 UNIQUE, 44 CHECK; 8 trigger, 7 transaction, 8 function và các procedure thêm/xóa/sửa/tìm kiếm cho mọi đối tượng.
-- Dữ liệu vận hành 3 tháng ở 3 chi nhánh (300 đầu sách, 1.623 cuốn, 200 độc giả, 831 phiếu mượn, 2.217 lượt mượn); 6 truy vấn hiển thị theo đúng yêu cầu sắp xếp của đề; chỉ mục, phân quyền và 47 ca kiểm thử tự động đều đạt.
-- Giao diện có đủ thêm/xóa/sửa/tìm kiếm cho các đối tượng chính, 23 thao tác được kiểm thử tự động bằng trình duyệt đều cho kết quả đúng kỳ vọng.
-- Thiết kế phân tán cho 3 site: phân mảnh ngang nguyên thủy (COM_MIN, PHORIZONTAL), dẫn xuất, dọc (BEA), lai; cấp phát, nhân bản; minh họa cài đặt và kiểm chứng 3 quy tắc phân mảnh (36/36 đạt).
+- Lược đồ E-R có đủ các loại tập thực thể, thuộc tính và liên kết mà đề yêu cầu, gồm cả thực thể yếu, cụ thể hóa ISA, liên kết đệ quy, liên kết 3 ngôi và kết hợp.
+- 23 lược đồ quan hệ đều ở dạng chuẩn BCNF, kèm phụ thuộc hàm, khóa, ví dụ chuẩn hóa từng bước, sơ đồ khóa chính – khóa ngoại và từ điển dữ liệu.
+- CSDL cài trên MariaDB với 23 khóa chính, 34 khóa ngoại, 11 ràng buộc UNIQUE, 44 ràng buộc CHECK, 8 trigger, 7 transaction và 8 function; tuổi thọ sách được cập nhật hằng ngày bằng event của MariaDB.
+- Dữ liệu mô phỏng ba tháng hoạt động ở ba chi nhánh (300 đầu sách, 1.623 cuốn, 200 độc giả, 831 phiếu mượn, 2.217 lượt mượn); sáu truy vấn hiển thị sắp xếp đúng như đề yêu cầu.
+- 52 ca kiểm thử nghiệp vụ và 23 thao tác trên giao diện đều cho kết quả đúng như mong đợi.
+- Thiết kế phân tán cho ba site gồm phân mảnh ngang nguyên thủy (COM_MIN, PHORIZONTAL), phân mảnh dẫn xuất, phân mảnh dọc (BEA), phân mảnh lai, cấp phát và nhân bản; ba quy tắc phân mảnh được kiểm chứng trên dữ liệu (36/36 ca đạt).
 
-Hướng phát triển: triển khai các site trên máy chủ thật với nhân bản MariaDB (replication) cho các bảng danh mục, bổ sung đặt trước sách và thông báo hạn trả tự động qua email.
+Bên cạnh đó, bài làm vẫn còn một số hạn chế. Phần phân tán mới được minh họa bằng ba database trên cùng một máy chủ, chưa chạy trên ba máy riêng. Nghiệp vụ hiện cho phép mượn sách ở chi nhánh khác nhưng chưa có giao tác phân tán cho trường hợp này. Giao diện còn đơn giản, chủ yếu phục vụ công việc của thủ thư.
+
+Thời gian tới, nhóm dự định triển khai ba site trên ba máy chủ thật, dùng cơ chế nhân bản (replication) của MariaDB cho các bảng danh mục, đồng thời bổ sung chức năng đặt trước sách và gửi email nhắc hạn trả cho độc giả.
 """)
 
 phu_luc = ["# PHỤ LỤC A. MÃ NGUỒN SQL\n", "Mã nguồn đầy đủ của các script chính (các file 05_seed.sql, 08_test.sql, 09_phan_tan.sql dài và được sinh tự động, nộp kèm theo).\n"]

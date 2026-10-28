@@ -22,6 +22,9 @@ fi
 apt-get install -y -q mariadb-server mariadb-client graphviz python3-venv python3-pip $NODE_PKG \
   fonts-liberation fonts-dejavu-core
 systemctl enable --now mariadb
+# Bật event scheduler để event ev_CapNhatTuoiTho (giảm tuổi thọ sách theo thời gian) chạy hằng ngày
+printf '[mysqld]\nevent_scheduler = ON\n' > /etc/mysql/mariadb.conf.d/90-qltv.cnf
+systemctl restart mariadb
 
 V=$(mariadb -N -e "SELECT VERSION()")
 dpkg --compare-versions "${V%%-*}" ge 10.11 || { echo "MariaDB $V < 10.11"; exit 1; }

@@ -4,7 +4,7 @@ Ký hiệu: khóa chính in **đậm**, khóa ngoại ghi `FK → BẢNG`. Thu�
 
 ## 3.1 Quy tắc ánh xạ đã dùng
 
-| Thành phần ERD | Quy tắc (chương 3b) | Kết quả |
+| Thành phần ERD | Quy tắc ánh xạ | Kết quả |
 | --- | --- | --- |
 | Thực thể mạnh | Mỗi tập thực thể → 1 quan hệ, định danh → PK | CHI_NHANH, THE_LOAI, TAC_GIA, DAU_SACH, PHONG_KHO, GIA_SACH, … |
 | Thuộc tính kép HoTen, DiaChi | Chỉ giữ các thành phần đơn | Ho, Dem, Ten; SoNha, Phuong, Quan, TinhTP |
@@ -56,7 +56,7 @@ Ghi chú: khóa ngoại vòng CHI_NHANH ↔ THU_THU được tạo bằng `ALTER
 
 ## 3.3 Phụ thuộc hàm, khóa và kiểm tra BCNF từng lược đồ
 
-Phương pháp (chương 3c): với mỗi lược đồ, liệt kê tập F đã tối thiểu (vế phải 1 thuộc tính được gộp cho gọn), tính bao đóng của vế trái để tìm khóa, rồi kiểm tra định nghĩa BCNF: *mọi PTH không hiển nhiên X → A đều có X là siêu khóa*.
+Cách làm theo bài giảng: với mỗi lược đồ, liệt kê tập F đã tối thiểu (vế phải 1 thuộc tính được gộp cho gọn), tính bao đóng của vế trái để tìm khóa, rồi kiểm tra định nghĩa BCNF: *mọi PTH không hiển nhiên X → A đều có X là siêu khóa*.
 
 | # | Tập F | Khóa (từ bao đóng) | BCNF? |
 | --- | --- | --- | --- |
@@ -84,11 +84,11 @@ Phương pháp (chương 3c): với mỗi lược đồ, liệt kê tập F đã
 | 22 PHIEU_THUE_PHONG | MaPhieuThue → mọi thuộc tính | MaPhieuThue | Có |
 | 23 CT_MUON_LUU_TRU | MaPhieuMuon, MaCuonSach → HanTra, MaPhieuTra, TienPhat | (MaPhieuMuon, MaCuonSach) | Có |
 
-**Các PTH đã cân nhắc và bác bỏ** (cần nêu trong báo cáo vì đây là chỗ dễ bị hỏi):
+Trong quá trình xác định phụ thuộc hàm, nhóm có cân nhắc một số phụ thuộc nhưng không đưa vào tập F, vì các lý do sau:
 
 - NGUOI: *Phuong → Quan*, *Quan → TinhTP* không đúng ở Việt Nam (nhiều quận/huyện có phường trùng tên, nhiều tỉnh có quận/huyện trùng tên), nên địa chỉ không gây phụ thuộc bắc cầu. Nếu nhóm quyết định coi chúng là PTH thì phải tách bảng PHUONG, QUAN, TINH.
-- CUON_SACH: *MaGia → MaTheLoai* và *MaDauSach → MaTheLoai* đều đúng về nghiệp vụ, nhưng MaTheLoai **không** nằm trong CUON_SACH nên không vi phạm. Ràng buộc "giá và đầu sách cùng thể loại" là ràng buộc liên bảng, cài bằng trigger TRG6.
-- CT_MUON: HanTra được tính từ NgayMuon và thể loại tại thời điểm mượn, nhưng sau đó là một **sự kiện được lưu** (có thể gia hạn), không phải PTH trên các thuộc tính của CT_MUON.
+- CUON_SACH: *MaGia → MaTheLoai* và *MaDauSach → MaTheLoai* đều đúng về nghiệp vụ, nhưng MaTheLoai không nằm trong CUON_SACH nên không vi phạm. Ràng buộc "giá và đầu sách cùng thể loại" là ràng buộc liên bảng, cài bằng trigger TRG6.
+- CT_MUON: HanTra được tính từ NgayMuon và thể loại tại thời điểm mượn, nhưng sau đó là một giá trị được lưu lại tại lúc mượn (có thể gia hạn), không phải PTH trên các thuộc tính của CT_MUON.
 
 ## 3.4 Thuộc tính dẫn xuất được lưu
 
@@ -97,7 +97,7 @@ Phương pháp (chương 3c): với mỗi lược đồ, liệt kê tập F đã
 | GIA_SACH.SoLuongHienCo | Đề yêu cầu "số lượng sách trên giá giảm/tăng" khi mượn/trả | Trigger TRG4 |
 | PHIEU_PHAT.SoTien | Ảnh chụp số tiền tại thời điểm trả; phí phạt có thể đổi theo NgayApDung | Trigger TRG3 dùng fn_TinhTienPhat |
 | PHIEU_THUE_PHONG.TongTien | Giá phòng có thể thay đổi sau khi đặt | Tính trong TX7 |
-| CUON_SACH.TuoiThoConLaiThang | Trạng thái của cuốn, giảm theo số lần mượn | Trigger TRG5 |
+| CUON_SACH.TuoiThoConLaiThang | Trạng thái của cuốn, giảm theo thời gian và theo số lần mượn | Trigger TRG5 khi mượn; thủ tục sp_CapNhatTuoiTho do event ev_CapNhatTuoiTho gọi mỗi ngày |
 
 ## 3.5 Ví dụ quá trình chuẩn hóa từ dạng chưa chuẩn
 
@@ -115,7 +115,7 @@ F = { MaPhieuMuon → NgayMuon, MaDocGia, MaThuThu;
       MaPhieuMuon, MaCuonSach → HanTra }
 
 **Tìm khóa** bằng thuật toán Closure: MaPhieuMuon và MaCuonSach không xuất hiện ở vế phải của PTH nào nên phải thuộc mọi khóa.
-{MaPhieuMuon, MaCuonSach}⁺: khởi tạo {MaPhieuMuon, MaCuonSach} → thêm NgayMuon, MaDocGia, MaThuThu → TenDocGia, TenThuThu → MaDauSach → TenSach, MaTheLoai → SoNgayMuon → HanTra = toàn bộ R. Không tập con thực sự nào đủ ⇒ **K = (MaPhieuMuon, MaCuonSach)** là khóa duy nhất. Thuộc tính khóa: MaPhieuMuon, MaCuonSach.
+{MaPhieuMuon, MaCuonSach}⁺: khởi tạo {MaPhieuMuon, MaCuonSach} → thêm NgayMuon, MaDocGia, MaThuThu → TenDocGia, TenThuThu → MaDauSach → TenSach, MaTheLoai → SoNgayMuon → HanTra = toàn bộ R. Không tập con thực sự nào đủ ⇒ K = (MaPhieuMuon, MaCuonSach) là khóa duy nhất. Thuộc tính khóa: MaPhieuMuon, MaCuonSach.
 
 **1NF → 2NF.** Có PTH bộ phận: MaPhieuMuon → NgayMuon, MaDocGia, MaThuThu (và theo bắc cầu TenDocGia, TenThuThu); MaCuonSach → MaDauSach (và TenSach, MaTheLoai, SoNgayMuon). Tách theo phần khóa mà chúng phụ thuộc:
 - R1(MaPhieuMuon, NgayMuon, MaDocGia, TenDocGia, MaThuThu, TenThuThu)

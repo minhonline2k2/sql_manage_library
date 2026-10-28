@@ -4,15 +4,15 @@
 
 ### 1.1 Mô tả nghiệp vụ
 
-Thư viện có 3 chi nhánh (CN01 Cầu Giấy, CN02 Hà Đông, CN03 Hoàn Kiếm), mở cửa 07:00–21:00. Mỗi chi nhánh có các phòng đựng sách (phòng kho), trong đó đặt các giá sách; mỗi giá chỉ chứa sách của **một thể loại**, tối đa 100 cuốn. Sách được quản lý theo **đầu sách** (một tựa sách); mỗi đầu sách có nhiều **cuốn sách** vật lý. Mã đầu sách có dạng `TR0012`, trong đó 2 ký tự đầu là mã thể loại; mã cuốn có dạng `TR0012-003` (đầu sách + số thứ tự), nên mã cuốn luôn chứa thông tin đầu sách và thể loại như đề yêu cầu.
+Thư viện có 3 chi nhánh (CN01 Cầu Giấy, CN02 Hà Đông, CN03 Hoàn Kiếm), mở cửa 07:00–21:00. Mỗi chi nhánh có các phòng đựng sách (phòng kho), trong đó đặt các giá sách; mỗi giá chỉ chứa sách của một thể loại, tối đa 100 cuốn. Sách được quản lý theo đầu sách (một tựa sách); mỗi đầu sách có nhiều cuốn sách vật lý. Mã đầu sách có dạng `TR0012`, trong đó 2 ký tự đầu là mã thể loại; mã cuốn có dạng `TR0012-003` (đầu sách + số thứ tự), nên mã cuốn luôn chứa thông tin đầu sách và thể loại như đề yêu cầu.
 
 Thủ thư làm việc tại một chi nhánh, có thể có thủ thư quản lý trực tiếp; mỗi chi nhánh có đúng một thủ thư trưởng. Độc giả đăng ký tại một chi nhánh và được cấp thẻ có hiệu lực 1 năm (gia hạn mỗi lần 1 năm).
 
-**Mượn sách:** thủ thư lập phiếu mượn cho độc giả; mỗi phiếu tối đa **10 cuốn**; tại mọi thời điểm một độc giả giữ tối đa **50 cuốn** chưa trả. Mỗi cuốn trong phiếu có hạn trả riêng = ngày mượn + số ngày mượn của thể loại, hoặc số ngày riêng của đầu sách nếu có (sách quý, ít bản). Thẻ hết hạn thì không được mượn. Khi mượn, số lượng sách trên giá giảm và tuổi thọ cuốn sách giảm 1 tháng.
+**Mượn sách:** thủ thư lập phiếu mượn cho độc giả; mỗi phiếu tối đa 10 cuốn; tại mọi thời điểm một độc giả giữ tối đa 50 cuốn chưa trả. Mỗi cuốn trong phiếu có hạn trả riêng = ngày mượn + số ngày mượn của thể loại, hoặc số ngày riêng của đầu sách nếu có (sách quý, ít bản). Thẻ hết hạn thì không được mượn. Khi mượn, số lượng sách trên giá giảm và tuổi thọ cuốn sách giảm 1 tháng.
 
 **Trả sách:** mỗi lần trả, độc giả trả 1 đến nhiều cuốn (có thể thuộc nhiều phiếu mượn khác nhau); số lượng trên giá tăng lại. Trả muộn bị phạt theo thể loại: tiền phạt = phạt cơ bản/cuốn + phạt mỗi ngày × số ngày trễ (Truyện 100.000đ + 10.000đ/ngày; Tham khảo 200.000đ + 30.000đ/ngày; các thể loại khác do nhóm quy định). Bảng phí phạt có ngày áp dụng để thư viện thay đổi chính sách mà không làm sai các phiếu phạt cũ.
 
-**Tuổi thọ sách:** mỗi thể loại có tuổi thọ (Truyện 15 năm, Tham khảo 10 năm, …), lưu theo tháng; mỗi lần mượn giảm 1 tháng. Cuốn về 0 chuyển trạng thái chờ thanh lý; khi thanh lý được chuyển sang bảng **SACH_THANH_LY** và xóa khỏi kho đang quản lý.
+**Tuổi thọ sách:** mỗi thể loại có tuổi thọ riêng (truyện 15 năm, tham khảo 10 năm, …), lưu theo tháng. Tuổi thọ giảm dần theo thời gian kể từ ngày nhập sách, và mỗi lần được mượn giảm thêm 1 tháng. Cuốn nào còn 0 tháng thì chuyển sang trạng thái chờ thanh lý; khi thanh lý, cuốn đó được chuyển sang bảng SACH_THANH_LY và xóa khỏi kho đang quản lý.
 
 **Phòng đọc:** độc giả thuê phòng học nhóm (4–10 người, 50.000đ/giờ, 1–4 giờ) hoặc phòng hội thảo (20–60 người, 300.000đ/giờ, 2–8 giờ); thuê theo giờ tròn trong giờ mở cửa, đặt trước tối đa 14 ngày, không trùng giờ, số người không vượt sức chứa; thủ thư duyệt phiếu thuê. Độc giả còn nợ phạt hoặc thẻ hết hạn không được thuê.
 
@@ -74,10 +74,10 @@ Tại mỗi chi nhánh:
 | THU_THU | Lớp con ISA | (kế thừa MaNguoi) | NgayVaoLam |
 | THE_DOC_GIA | Mạnh | SoThe | NgayCap, NgayHetHan, ConHan *(dẫn xuất)* |
 | THE_LOAI | Mạnh | MaTheLoai | TenTheLoai, SoNgayMuon, TuoiThoNam |
-| BANG_PHI_PHAT | **Yếu** (chủ: THE_LOAI) | khóa bán phần NgayApDung | PhatCoBan, PhatMoiNgay |
+| BANG_PHI_PHAT | Yếu (chủ: THE_LOAI) | khóa bán phần NgayApDung | PhatCoBan, PhatMoiNgay |
 | TAC_GIA | Mạnh | MaTacGia | TenTacGia, QuocTich |
 | DAU_SACH | Mạnh | MaDauSach | TenSach, NhaXuatBan, NamXuatBan, SoNgayMuonRieng *(rỗng được)*, SoLuotMuon *(dẫn xuất)* |
-| CUON_SACH | **Yếu** (chủ: DAU_SACH) | khóa bán phần STT | NgayNhap, TuoiThoConLaiThang, TrangThai |
+| CUON_SACH | Yếu (chủ: DAU_SACH) | khóa bán phần STT | NgayNhap, TuoiThoConLaiThang, TrangThai |
 | PHONG_KHO | Mạnh | MaPhongKho | TenPhong, Tang |
 | GIA_SACH | Mạnh | MaGia | SucChua, SoLuongHienCo *(dẫn xuất, lưu để tăng/giảm như đề)* |
 | SACH_THANH_LY | Mạnh (danh mục lưu trữ) | MaCuonSach | NgayNhap, NgayThanhLy, LyDo |
@@ -92,33 +92,33 @@ Tại mỗi chi nhánh:
 
 | Liên kết | Tập tham gia | Lực lượng | Tham gia | Thuộc tính / ghi chú |
 | --- | --- | --- | --- | --- |
-| ISA | NGUOI → DOC_GIA, THU_THU | — | Toàn bộ, **disjoint** (phân biệt bằng LoaiNguoi = 'DG'/'TT') | Cụ thể hóa |
-| truong_chi_nhanh | THU_THU – CHI_NHANH | **1:1** | CHI_NHANH toàn bộ, THU_THU một phần | Thủ thư trưởng |
-| lam_viec_tai | THU_THU – CHI_NHANH | N:1 | Toàn bộ phía THU_THU | |
-| quan_ly | THU_THU – THU_THU | 1:N **đệ quy** | Một phần | Vai trò: người quản lý / nhân viên |
+| ISA | NGUOI → DOC_GIA, THU_THU | — | Toàn bộ, disjoint (phân biệt bằng LoaiNguoi = 'DG'/'TT') | Cụ thể hóa |
+| truong_chi_nhanh | THU_THU – CHI_NHANH | 1:1 | CHI_NHANH toàn bộ, THU_THU một phần | Thủ thư trưởng |
+| lam_viec_tai | THU_THU – CHI_NHANH | N:1 | Toàn bộ hai phía | Chi nhánh nào cũng có ít nhất một thủ thư (người trưởng) |
+| quan_ly | THU_THU – THU_THU | 1:N đệ quy | Một phần | Vai trò: người quản lý / nhân viên |
 | dang_ky_tai | DOC_GIA – CHI_NHANH | N:1 | Toàn bộ phía DOC_GIA | |
 | so_huu_the | DOC_GIA – THE_DOC_GIA | 1:1 | Toàn bộ hai phía | |
 | thuoc_the_loai | DAU_SACH – THE_LOAI | N:1 | Toàn bộ phía DAU_SACH | |
-| ap_dung_phi | THE_LOAI – BANG_PHI_PHAT | 1:N | **Liên kết xác định** (thực thể yếu) | |
-| viet | DAU_SACH – TAC_GIA | **N:N** | | Từ thuộc tính đa trị "tác giả" |
-| gom_cuon | DAU_SACH – CUON_SACH | 1:N | **Liên kết xác định** | |
+| ap_dung_phi | THE_LOAI – BANG_PHI_PHAT | 1:N | Toàn bộ hai phía | Liên kết xác định của thực thể yếu; thể loại nào cũng có biểu phí |
+| viet | DAU_SACH – TAC_GIA | M:N | Toàn bộ phía TAC_GIA | Từ thuộc tính đa trị "tác giả" |
+| gom_cuon | DAU_SACH – CUON_SACH | 1:N | Toàn bộ phía CUON_SACH | Liên kết xác định của thực thể yếu |
 | dat_tai | CUON_SACH – GIA_SACH | N:1 | Toàn bộ phía CUON_SACH | |
 | chua_the_loai | GIA_SACH – THE_LOAI | N:1 | Toàn bộ phía GIA_SACH | Giá chỉ chứa 1 thể loại |
 | nam_trong | GIA_SACH – PHONG_KHO | N:1 | Toàn bộ | |
 | thuoc_chi_nhanh | PHONG_KHO – CHI_NHANH | N:1 | Toàn bộ | |
-| **muon** | THU_THU – DOC_GIA – CUON_SACH | **3 ngôi** | | Ở mức khái niệm: một lần mượn liên quan đồng thời thủ thư, độc giả, cuốn sách; được hiện thực hóa bằng thực thể PHIEU_MUON + liên kết gom_sach |
-| lap_phieu_muon | THU_THU – PHIEU_MUON | 1:N | | |
-| muon_boi | DOC_GIA – PHIEU_MUON | 1:N | | |
-| gom_sach | PHIEU_MUON – CUON_SACH | **N:N** | Ràng buộc **(1,10)** phía PHIEU_MUON | Thuộc tính HanTra |
-| tra_lai | PHIEU_TRA – [gom_sach] | 1:N | **Kết hợp (aggregation)**: phiếu trả liên kết với cặp (phiếu mượn, cuốn sách) | Mỗi dòng mượn được trả đúng một lần |
-| bi_phat | PHIEU_PHAT – [gom_sach] | 1:1 | **Kết hợp** | Chỉ dòng trả muộn |
-| lap_phieu_tra | THU_THU – PHIEU_TRA | 1:N | | |
-| tra_boi | DOC_GIA – PHIEU_TRA | 1:N | | |
-| giu_sach | DOC_GIA – CUON_SACH | ràng buộc **(0,50)** | | Số cuốn chưa trả tại một thời điểm (suy ra từ gom_sach) |
+| muon | THU_THU – DOC_GIA – CUON_SACH | 3 ngôi | | Ở mức khái niệm: một lần mượn liên quan đồng thời thủ thư, độc giả, cuốn sách; được hiện thực hóa bằng thực thể PHIEU_MUON + liên kết gom_sach |
+| lap_phieu_muon | THU_THU – PHIEU_MUON | 1:N | Toàn bộ phía PHIEU_MUON | |
+| muon_boi | DOC_GIA – PHIEU_MUON | 1:N | Toàn bộ phía PHIEU_MUON | |
+| gom_sach | PHIEU_MUON – CUON_SACH | M:N | Toàn bộ phía PHIEU_MUON, ràng buộc (1,10) | Thuộc tính HanTra |
+| tra_lai | PHIEU_TRA – [gom_sach] | 1:N | Toàn bộ phía PHIEU_TRA | Kết hợp (aggregation): phiếu trả gắn với cặp (phiếu mượn, cuốn sách); mỗi lần mượn được trả nhiều nhất một lần |
+| bi_phat | PHIEU_PHAT – [gom_sach] | 1:1 | Toàn bộ phía PHIEU_PHAT | Kết hợp; chỉ lần mượn trả muộn mới có phiếu phạt |
+| lap_phieu_tra | THU_THU – PHIEU_TRA | 1:N | Toàn bộ phía PHIEU_TRA | |
+| tra_boi | DOC_GIA – PHIEU_TRA | 1:N | Toàn bộ phía PHIEU_TRA | |
+| giu_sach | DOC_GIA – CUON_SACH | 1:N, ràng buộc (0,50) | Một phần | Số cuốn chưa trả tại một thời điểm, suy ra từ gom_sach |
 | thuoc_loai | PHONG_DOC – LOAI_PHONG | N:1 | Toàn bộ | |
 | phong_cua | PHONG_DOC – CHI_NHANH | N:1 | Toàn bộ | |
-| **thue_phong** | DOC_GIA – PHONG_DOC – THU_THU | **3 ngôi** M:N:1 | | Vẽ trực tiếp trên ERD: mỗi lần thuê gắn một độc giả, một phòng và **một** thủ thư duyệt; thuộc tính của liên kết: NgayDat, BatDau, KetThuc, SoNguoi, MucDich, TrangThai, TongTien (dẫn xuất). Một độc giả có thể thuê cùng một phòng nhiều lần ở các khung giờ khác nhau |
-| thanh_ly_tu | SACH_THANH_LY – DAU_SACH | N:1 | | Giữ được thông tin đầu sách sau khi thanh lý |
+| thue_phong | DOC_GIA – PHONG_DOC – THU_THU | 3 ngôi M:N:1 | | Mỗi lần thuê gắn một độc giả, một phòng và một thủ thư duyệt; thuộc tính của liên kết: NgayDat, BatDau, KetThuc, SoNguoi, MucDich, TrangThai, TongTien (dẫn xuất). Một độc giả có thể thuê cùng một phòng nhiều lần ở các khung giờ khác nhau |
+| thanh_ly_tu | SACH_THANH_LY – DAU_SACH | N:1 | Toàn bộ phía SACH_THANH_LY | Giữ được thông tin đầu sách sau khi thanh lý |
 
 ### 2.3 Đối chiếu yêu cầu "đầy đủ các loại" của đề
 
@@ -143,4 +143,4 @@ Tại mỗi chi nhánh:
 
 ### 2.4 Sơ đồ
 
-Sơ đồ ERD ký hiệu Chen được vẽ bằng Graphviz (`btl/erd/erd.dot`), xuất ảnh ở phần P10 để đưa vào báo cáo: chữ nhật = tập thực thể, chữ nhật kép = thực thể yếu, thoi = liên kết, thoi kép = liên kết xác định, ellipse = thuộc tính (gạch chân = khóa, nét đứt = dẫn xuất, viền kép = đa trị), tam giác ISA, hộp nét đứt bao quanh gom_sach = kết hợp. Ký hiệu liên kết theo bài giảng: nhãn lực lượng 1 / N / M ghi sát mỗi thực thể (1:1, 1:N, N:1, M:N); chân gà đặt ở đầu thực thể phía "nhiều"; đường đôi giữa thực thể và hình thoi = thực thể tham gia toàn bộ, đường đơn = tham gia một phần; ràng buộc (min,max) ghi kèm khi có giới hạn cụ thể: (1,10) cạnh PHIEU_MUON trên gom_sach (mỗi phiếu mượn 1–10 cuốn) và (0,50) trên nhánh DOC_GIA của giu_sach (mỗi độc giả giữ tối đa 50 cuốn). Liên kết đệ quy quan_ly ghi tên vai trò (quản lý, nhân viên) trên hai nhánh; đường đôi từ NGUOI lên tam giác ISA = tổng quát hóa đầy đủ. Riêng sơ đồ lược đồ quan hệ (mục 3.7) dùng ký hiệu chân gà đầy đủ của chuẩn IE cho cạnh khóa ngoại.
+Lược đồ E-R vẽ theo ký hiệu Chen trong bài giảng (chi tiết ký hiệu ở mục 2.4 của báo cáo); mã vẽ sơ đồ ở `ma_nguon/erd/gen_erd.py`.

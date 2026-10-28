@@ -3983,3 +3983,5 @@ CALL sp_MuonSach('DG0161','TT007','["TR0019-004", "TK0019-004", "TR0013-006", "T
 CALL sp_ThuePhong('DG0085','CN01-H1','TT004','2026-10-12 17:00:00','2026-10-12 21:00:00',56,'2026-09-30',@pt,@tien);
 
 -- Thống kê mô phỏng: {"muon": 831, "cuon": 2217, "tra": 1568, "phat": 318, "nop": 195, "thue": 150, "giahan": 44}
+-- Đưa tuổi thọ sách về đúng ngày dựng CSDL (sau đó event ev_CapNhatTuoiTho cập nhật mỗi ngày)
+CALL sp_CapNhatTuoiTho(CURDATE(), @so_cuon);
