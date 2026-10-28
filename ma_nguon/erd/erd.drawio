@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net">
   <diagram name="ERD" id="qXYFmDHTpGI6eSzdMatW">
-    <mxGraphModel dx="3214" dy="1702" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="1178" dy="624" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -479,7 +479,11 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="xGU4IqcUC1DbeQ-D4wrJ-159" edge="1" parent="1" source="xGU4IqcUC1DbeQ-D4wrJ-26" style="html=1;rounded=0;strokeColor=#000000;fontFamily=Arial;fontSize=11;endSize=12;startSize=12;startArrow=none;endArrow=none;startFill=0;endFill=0;startArrow=ERzeroToOne;" target="xGU4IqcUC1DbeQ-D4wrJ-96" value="quản lý">
-          <mxGeometry relative="1" as="geometry" />
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="830" y="1350" />
+            </Array>
+          </mxGeometry>
         </mxCell>
         <mxCell id="xGU4IqcUC1DbeQ-D4wrJ-160" edge="1" parent="1" source="xGU4IqcUC1DbeQ-D4wrJ-26" style="html=1;rounded=0;strokeColor=#000000;fontFamily=Arial;fontSize=11;endSize=12;startSize=12;startArrow=none;endArrow=none;startFill=0;endFill=0;startArrow=ERmandOne;" target="xGU4IqcUC1DbeQ-D4wrJ-107" value="">
           <mxGeometry relative="1" as="geometry" />
@@ -706,7 +710,11 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="xGU4IqcUC1DbeQ-D4wrJ-234" edge="1" parent="1" source="xGU4IqcUC1DbeQ-D4wrJ-96" style="html=1;rounded=0;strokeColor=#000000;fontFamily=Arial;fontSize=11;endSize=12;startSize=12;startArrow=none;endArrow=none;startFill=0;endFill=0;endArrow=ERzeroToMany;" target="xGU4IqcUC1DbeQ-D4wrJ-26" value="nhân viên">
-          <mxGeometry relative="1" as="geometry" />
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="900" y="1350" />
+            </Array>
+          </mxGeometry>
         </mxCell>
         <mxCell id="xGU4IqcUC1DbeQ-D4wrJ-235" edge="1" parent="1" source="xGU4IqcUC1DbeQ-D4wrJ-97" style="html=1;rounded=0;strokeColor=#000000;fontFamily=Arial;fontSize=11;endSize=12;startSize=12;startArrow=none;endArrow=none;startFill=0;endFill=0;endArrow=ERmandOne;" target="xGU4IqcUC1DbeQ-D4wrJ-1" value="">
           <mxGeometry relative="1" as="geometry" />
